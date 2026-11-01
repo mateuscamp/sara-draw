@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import time
+
 import pytest
 
 from ai_draw.geometry.path import Path, ellipse, rect
@@ -79,3 +81,13 @@ def test_circles_of_every_small_radius_are_mirror_images_without_l(radius: int) 
 def test_curve_that_only_touches_a_pixel_edge_stays_on_its_own_side() -> None:
     dip = Path().move_to(0.5, 1).line_to(4, 3).line_to(7.5, 1)
     assert max(y for _, y in line_cells(dip)) == 2
+
+
+def test_a_large_ellipse_settles_its_steps_quickly() -> None:
+    # Regression (audit G1, 01/11): this ellipse's steps swapped back and forth until the
+    # n**2 pass ceiling, 2.3 s here and minutes for a circle of radius 220.
+    start = time.perf_counter()
+    cells = frozenset(line_cells(ellipse(62, 63, 59, 60)))
+    elapsed = time.perf_counter() - start
+    assert elapsed < 0.5
+    assert l_corners(cells) == 0

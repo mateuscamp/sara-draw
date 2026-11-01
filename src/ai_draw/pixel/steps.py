@@ -101,20 +101,45 @@ def _proposal(stretch: _Stretch, index: int) -> tuple[int, int] | None:
     return pair if stretch.swappable(*pair) else None
 
 
+def _out_of_order(stretch: _Stretch) -> int:
+    """How many runs sit outside the range of their two neighbors."""
+    count = 0
+    for index in range(len(stretch.runs)):
+        around = stretch.neighbors(index)
+        if around is None:
+            continue
+        slopes = [_slope(stretch.runs[i]) for i in (around[0], index, around[1])]
+        if None in slopes:
+            continue
+        a, b, c = (slope or 0.0 for slope in slopes)
+        count += a != c and not min(a, c) <= b <= max(a, c)
+    return count
+
+
+def _swap(stretch: _Stretch, pairs: list[tuple[int, int]]) -> None:
+    for first, second in pairs:
+        stretch.runs[first], stretch.runs[second] = stretch.runs[second], stretch.runs[first]
+
+
 def _settle(stretch: _Stretch) -> None:
-    """Swap runs until every one sits in the order of its neighbors.
+    """Swap runs while it puts more of them in the order of their neighbors.
 
     Each pass decides all its swaps before making any, and drops the swaps that share a run,
-    so the result does not depend on which end the line was drawn from.
+    so the result does not depend on which end the line was drawn from. A pass that does not
+    lower the count of runs out of order is undone and ends the settling: some lines swap two
+    runs back and forth forever, and the count can only go down so many times (audit G1).
     """
-    for _ in range(len(stretch.runs) ** 2):
+    disorder = _out_of_order(stretch)
+    while disorder:
         proposals = {pair for i in range(len(stretch.runs)) if (pair := _proposal(stretch, i))}
         used = [i for pair in proposals for i in pair]
         swaps = [pair for pair in proposals if used.count(pair[0]) == used.count(pair[1]) == 1]
-        if not swaps:
+        _swap(stretch, swaps)
+        after = _out_of_order(stretch)
+        if not swaps or after >= disorder:
+            _swap(stretch, swaps)  # each swap undoes itself
             return
-        for first, second in swaps:
-            stretch.runs[first], stretch.runs[second] = stretch.runs[second], stretch.runs[first]
+        disorder = after
 
 
 def _rebuild(start: Cell, stretch: _Stretch) -> list[Cell]:
