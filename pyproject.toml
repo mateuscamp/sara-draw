@@ -1,0 +1,52 @@
+[project]
+name = "ai-draw"
+version = "0.0.0"
+description = "Vector drawing for Python with two outputs: smooth antialiasing and rule-abiding pixel art."
+authors = [{ name = "Mateus Campelo" }]
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["numpy>=2.1", "pillow>=11"]
+
+[dependency-groups]
+dev = ["basedpyright>=1.30", "pytest>=8.4", "ruff>=0.13"]
+
+[build-system]
+requires = ["uv_build>=0.11.9,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # conflicts with ruff format
+    "CPY001", # the SPDX header is the notice; tests/architecture enforces it (ADR-0003)
+    "D203",   # D211 wins: no blank line before class docstring
+    "D213",   # D212 wins: summary on the first docstring line
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all" # AGENTS.md: imports are absolute
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",   # assert is how pytest checks
+    "D",      # test names say what they check
+    "INP001", # tests/ is not a package
+    "PLR2004", # literal expected values are the point of a test
+]
+
+[tool.basedpyright]
+typeCheckingMode = "all"
+pythonVersion = "3.11"
+include = ["src", "tests"]
+# pytest fixtures and test functions are called by name, never imported
+reportUnusedFunction = "none"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-q", "--strict-markers", "--import-mode=importlib"]
+xfail_strict = true

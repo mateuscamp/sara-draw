@@ -1,0 +1,12 @@
+# Local and private: provenance of the port, private-term list, parity script.
+notes/
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+out/
