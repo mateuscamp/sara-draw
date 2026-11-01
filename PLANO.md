@@ -209,7 +209,14 @@ Porte: código Lua anterior do autor, privado; caminhos e commits ficam em `note
 git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
 14/10/2026), vetor suave em tempo de execução, sem código mostrado.
 
+## Estado
+
+- Fase 0 (31/10): esqueleto, portão e oito fitness functions em `tests/architecture/`.
+- Fase 1 (31/10): `geometry` (path, transform), `grid` (canvas, rows), `pixel` (fill, stroke,
+  rounded), `io/png` e `ai-draw render`. Paridade com a cena de referência em Lua: 0 pixel
+  diferente em 64×64 (conferência local, fora do git). A saída reproduz os defeitos de
+  partida: pontas da estrela soltas, onda de 2 px com espessura irregular.
+
 ## Próximo passo
 
-Fase 0: `git init`, esqueleto com `uv`, e o teste de fronteira visto falhar
-antes de qualquer módulo de desenho.
+Fase 2: `grid/rows.from_rows`, `grid/outline`, `grid/compare` e `ai-draw watch` com o `imv`.

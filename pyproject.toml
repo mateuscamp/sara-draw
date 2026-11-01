@@ -8,6 +8,9 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.1", "pillow>=11"]
 
+[project.scripts]
+ai-draw = "ai_draw.cli:main"
+
 [dependency-groups]
 dev = ["basedpyright>=1.30", "pytest>=8.4", "ruff>=0.13"]
 
@@ -25,6 +28,7 @@ ignore = [
     "COM812", # conflicts with ruff format
     "CPY001", # the SPDX header is the notice; tests/architecture enforces it (ADR-0003)
     "D203",   # D211 wins: no blank line before class docstring
+    "D401",   # docstrings of values and properties read better as nouns ("The color at...")
     "D213",   # D212 wins: summary on the first docstring line
 ]
 
@@ -47,6 +51,7 @@ include = ["src", "tests"]
 reportUnusedFunction = "none"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = ["-q", "--strict-markers", "--import-mode=importlib"]
+# src/ too: the >>> examples in docstrings run as tests, so they cannot rot
+testpaths = ["tests", "src"]
+addopts = ["-q", "--strict-markers", "--import-mode=importlib", "--doctest-modules"]
 xfail_strict = true
