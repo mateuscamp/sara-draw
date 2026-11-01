@@ -10,7 +10,8 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 - Portão (rodar antes de declarar qualquer tarefa concluída):
   `uv run ruff format --check && uv run ruff check && uv run basedpyright && uv run pytest`
 - Ver uma cena (a partir da fase 1): `uv run ai-draw render <cena.py> --scale 10`; ao vivo
-  (fase 2): `uv run ai-draw watch <cena.py>`. Exemplos públicos em `examples/`, cada um testado.
+  (fase 2): `uv run ai-draw watch <cena.py>`; cores: `uv run ai-draw palette <cena.py> --near 10`.
+- Exemplos públicos em `examples/`, cada um testado e com `PALETTE` fechada: cor fora reprova.
 - Fitness functions: `tests/architecture/test_architecture.py`. Regra nova nasce com o teste
   que a mostra pegando uma violação plantada, visto falhar antes.
 

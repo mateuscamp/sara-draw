@@ -59,3 +59,12 @@ def color_mask(pixels: NDArray[np.uint8], color: tuple[int, int, int, int]) -> N
 def count_differing(first: NDArray[np.uint8], second: NDArray[np.uint8]) -> int:
     """How many pixels differ in any channel; the arrays must have the same shape."""
     return int(np.count_nonzero((first != second).any(axis=2)))
+
+
+def color_counts(pixels: NDArray[np.uint8]) -> dict[tuple[int, int, int, int], int]:
+    """How many pixels have each color, alpha included."""
+    colors, counts = np.unique(pixels.reshape(-1, 4), axis=0, return_counts=True)
+    return {
+        (int(r), int(g), int(b), int(a)): int(count)
+        for (r, g, b, a), count in zip(colors.tolist(), counts.tolist(), strict=True)
+    }

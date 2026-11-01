@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import runpy
 from pathlib import Path
 
 import pytest
 
+from ai_draw.grid.palette import Palette
 from ai_draw.io.scene import load_scene
 
 EXAMPLES = sorted((Path(__file__).resolve().parents[2] / "examples").glob("*.py"))
@@ -17,3 +19,10 @@ def test_example_draws_hard_pixels(scene: Path) -> None:
     canvas = load_scene(scene)
     # ADR-0001: the pixel output has alpha 0 or 255 only
     assert set(canvas.pixels[:, :, 3].tobytes()) <= {0, 255}
+
+
+@pytest.mark.parametrize("scene", EXAMPLES, ids=[path.stem for path in EXAMPLES])
+def test_example_keeps_to_its_closed_palette(scene: Path) -> None:
+    palette = runpy.run_path(str(scene)).get("PALETTE")
+    assert isinstance(palette, Palette), "every example declares PALETTE, its closed palette"
+    assert palette.foreign(load_scene(scene)) == []

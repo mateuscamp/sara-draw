@@ -264,8 +264,16 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   1 → 0 componente a mais, onda de 2 px 10 → 0 de wobble; nada subiu. Tempo, cena 256×256:
   traço de 2 px num círculo de raio 100 em 41 ms, preenchimento em 12 ms.
 
+- Fase 6 (31/10): `grid/palette.py`. `Palette` fechada em famílias (`Family.of("wood",
+  ["8a5a34 base", ...])`, cada cor numa família só), `foreign` (as cores fora da paleta),
+  `quantize` (cor mais próxima ao olho, pelo "redmean", sem pontilhado, alfa só 0 ou 255),
+  `collect`, `near_pairs` e `merge` (porte do núcleo genérico: funde quase iguais só dentro
+  da família e nunca duas cores que uma peça usa juntas). Comando `ai-draw palette cena.py
+  --near N`. Fitness: todo exemplo público declara `PALETTE` e não pode usar cor fora dela
+  (`tests/examples`); a poção passou a declarar a dela, com os mesmos pixels.
+
 ## Próximo passo
 
-Fase 6: paleta (levantar cores, pares quase iguais, famílias, fundir, quantizar sem
-pontilhado); meta: cor fora da paleta reprova. Pendente da fase 4: círculos grandes leem
-octogonais, e falta um detector de redondeza.
+Fase 7: saída suave (`smooth/coverage.py`, cobertura exata por célula; traço por offset);
+meta: coração e onda a ≤ 1/255 por canal do `FreeTypePen` (dependência só de teste, emenda
+proposta no ADR-0002, a aceitar antes). Pendente da fase 4: detector de redondeza.

@@ -10,15 +10,27 @@ library only adds the one-pixel outline around the silhouette::
 
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.outline import outline
+from ai_draw.grid.palette import Family, Palette
 from ai_draw.grid.rows import from_rows
 
-INK: Color = (34, 28, 40, 255)
+# The closed palette: every color the bottle may use, by material and role.
+INK = Family.of("ink", ["221c28 outline"])
+CORK = Family.of("cork", ["96643e base"])
+GLASS = Family.of("glass", ["accee2 base", "f8f8f0 glint, top left: the light comes from there"])
+POTION = Family.of("potion", ["60c478 base", "34845c shadow, bottom right"])
+PALETTE = Palette((INK, CORK, GLASS, POTION))
+
+
+def _color(family: Family, index: int = 0) -> Color:
+    return family.swatches[index].color
+
+
 LEGEND: dict[str, Color] = {
-    "c": (150, 100, 62, 255),  # cork
-    "g": (172, 206, 226, 255),  # glass
-    "w": (248, 248, 240, 255),  # glint, top left: the light comes from there
-    "l": (96, 196, 120, 255),  # potion
-    "L": (52, 132, 92, 255),  # potion in shadow, bottom right
+    "c": _color(CORK),
+    "g": _color(GLASS),
+    "w": _color(GLASS, 1),
+    "l": _color(POTION),
+    "L": _color(POTION, 1),
 }
 BOTTLE = (
     "....cccc....",
@@ -41,4 +53,4 @@ BOTTLE = (
 
 def draw() -> Canvas:
     """The bottle with its outline, 12 by 15 pixels."""
-    return outline(from_rows(BOTTLE, LEGEND), INK)
+    return outline(from_rows(BOTTLE, LEGEND), _color(INK))

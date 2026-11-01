@@ -6,6 +6,7 @@ A scene is a Python file with a ``draw()`` that returns a ``Canvas``::
     ai-draw render scene.py --scale 10        # writes scene.png next to it
     ai-draw render scene.py -o out/big.png
     ai-draw watch scene.py --scale 8           # redraws on every save, shown in imv
+    ai-draw palette scene.py --near 10         # colors in use, and the pairs this close
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ai_draw.grid.palette import collect, near_pairs, to_hex
 from ai_draw.io.live import INTERVAL, LiveSession, open_imv, run
 from ai_draw.io.png import write_png
 from ai_draw.io.scene import SceneError, load_scene
@@ -35,6 +37,7 @@ class _Arguments(argparse.Namespace):
     also: Sequence[Path] = ()
     no_viewer: bool = False
     once: bool = False
+    near: int | None = None
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -49,6 +52,9 @@ def _parser() -> argparse.ArgumentParser:
     _ = watch.add_argument("--also", type=Path, action="append", default=[], help="watch too")
     _ = watch.add_argument("--no-viewer", action="store_true", help="do not open imv")
     _ = watch.add_argument("--once", action="store_true", help="draw once and exit")
+    palette = commands.add_parser("palette", help="list a scene's colors and near pairs")
+    _ = palette.add_argument("scene", type=Path, help="Python file with draw() -> Canvas")
+    _ = palette.add_argument("--near", type=int, default=None, help="list pairs this close")
     return parser
 
 
@@ -79,7 +85,24 @@ def _watch(arguments: _Arguments) -> int:
     return 0
 
 
+def _palette(arguments: _Arguments) -> int:
+    try:
+        canvas = load_scene(arguments.scene)
+    except (SceneError, ValueError) as error:
+        _say(str(error))
+        return EXIT_SCENE_ERROR
+    used = collect({arguments.scene.stem: canvas})
+    for use in used:
+        print(f"{to_hex(use.color)}  {use.pixels} px")  # noqa: T201 - the command's output
+    if arguments.near is not None:
+        for first, second in near_pairs([use.color for use in used], arguments.near):
+            print(f"near: {to_hex(first)} {to_hex(second)}")  # noqa: T201 - the command's output
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point of ``ai-draw``; returns the exit code."""
     arguments = _parser().parse_args(argv, namespace=_Arguments())
+    if arguments.command == "palette":
+        return _palette(arguments)
     return _watch(arguments) if arguments.command == "watch" else _render(arguments)

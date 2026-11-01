@@ -71,3 +71,22 @@ def test_watch_once_reports_a_broken_scene(
     scene = write_scene(tmp_path, "x = 1\n")
     assert main(["watch", str(scene), "--once", "--no-viewer"]) == 2
     assert "draw()" in capsys.readouterr().err
+
+
+def test_palette_lists_the_colors_in_use_and_the_near_pairs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = """
+from ai_draw.grid.canvas import Canvas
+
+
+def draw() -> Canvas:
+    canvas = Canvas(3, 1)
+    canvas.paint(0, 0, (200, 40, 40, 255))
+    canvas.paint(1, 0, (200, 40, 40, 255))
+    canvas.paint(2, 0, (204, 42, 40, 255))
+    return canvas
+"""
+    assert main(["palette", str(write_scene(tmp_path, source)), "--near", "5"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines == ["#c82828  2 px", "#cc2a28  1 px", "near: #c82828 #cc2a28"]
