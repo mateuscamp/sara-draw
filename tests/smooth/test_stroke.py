@@ -45,6 +45,20 @@ def test_sharp_turn_is_round_outside_and_sharp_inside(corner: tuple[Point, Point
     assert area(rows) == pytest.approx(39 + 1.25 * math.pi, abs=0.03)
 
 
+@pytest.mark.parametrize(("turn_degrees", "width"), [(120, 3), (135, 3), (150, 2)])
+def test_a_sharp_turn_keeps_the_inner_corner_filled(turn_degrees: float, width: float) -> None:
+    # Regression (audit A2, 01/11): past about 120 degrees the inner corner was clamped and
+    # left a notch. Two legs of 14 swept by a disc of radius r turning by t cover exactly
+    # 2r(L1 + L2) + pi r^2 + r^2 (t/2 - tan(t/2)), while the overlap fits on the legs.
+    turn, r = math.radians(turn_degrees), width / 2
+    end = (20 + 14 * math.cos(turn), 20 - 14 * math.sin(turn))
+    rows = coverage(
+        stroke_outline(Path().move_to(6, 20).line_to(20, 20).line_to(*end), width), 40, 40
+    )
+    exact = 2 * r * 28 + math.pi * r * r + r * r * (turn / 2 - math.tan(turn / 2))
+    assert area(rows) == pytest.approx(exact, abs=0.05)
+
+
 def test_stroke_outline_matches_freetype_within_one_step() -> None:
     outline = stroke_outline(wave(), 2)
     ours = coverage(outline, 54, 32)

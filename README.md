@@ -100,8 +100,8 @@ with 1 when it finds one, so it can guard a build.
 - Large one-pixel circles read slightly octagonal: the step from the flat top to the first
   diagonal is abrupt. No detector measures roundness yet. `skimage.draw`'s Bresenham circle
   reads rounder, with the L corners and wobble counted above.
-- A smooth stroke keeps the inner side of a corner sharp; a turn tighter than the stroke
-  width overlaps itself there.
+- A smooth stroke's inner corner is exact while the overlap of the two legs fits on them; a
+  sharp turn between legs shorter than that is approximated through the vertex.
 
 ## How it is made
 

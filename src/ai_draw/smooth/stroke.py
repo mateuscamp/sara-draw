@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 # A vertex that turns more than this gets a round join instead of a bare corner.
 _JOIN_DEGREES = 15
-# The corner point on the inner side never reaches past this many half-widths.
+# A small outer turn keeps a mitered corner, never reaching past this many half-widths.
 _MITER_LIMIT = 2.0
 
 
@@ -77,29 +77,40 @@ def _side(
             side.append((point[0] + nx * half, point[1] + ny * half))
             continue
         before, after = normals[index - 1], normals[index % len(normals)]
-        side.extend(_join(point, before, after, half, outer_turn=outer_turn))
+        room = min(
+            math.dist(point, points[index - 1]), math.dist(point, points[(index + 1) % count])
+        )
+        side.extend(_join(point, (before, after), half, room=room, outer_turn=outer_turn))
     return side
 
 
 def _join(
-    point: Point, before: Point, after: Point, half: float, *, outer_turn: int
+    point: Point, normals: tuple[Point, Point], half: float, *, room: float, outer_turn: int
 ) -> list[Point]:
-    """The side's points at a vertex between two segments with normals ``before``, ``after``.
+    """The side's points at a vertex between two segments with these normals.
 
-    Outside a sharp corner the side follows an arc; inside, it keeps the corner point, held
-    within ``_MITER_LIMIT`` half-widths.
+    Outside a sharp corner the side follows an arc. Inside, it takes the point where the two
+    pushed-out edges cross, which is exact while that crossing lands on both segments
+    (``room`` is the shorter one); the old cap of two half-widths cut a notch into turns past
+    120 degrees (audit A2). Without room, the side goes through the vertex itself.
     """
+    before, after = normals
     cross = before[0] * after[1] - before[1] * after[0]
     turn = math.atan2(cross, before[0] * after[0] + before[1] * after[1])
+    first = (point[0] + before[0] * half, point[1] + before[1] * half)
+    last = (point[0] + after[0] * half, point[1] + after[1] * half)
     if abs(math.degrees(turn)) > _JOIN_DEGREES and turn * outer_turn > 0:
-        start = math.atan2(before[1], before[0])
-        first = (point[0] + before[0] * half, point[1] + before[1] * half)
-        last = (point[0] + after[0] * half, point[1] + after[1] * half)
-        return [first, *_arc(point, half, start, turn), last]
+        return [first, *_arc(point, half, math.atan2(before[1], before[0]), turn), last]
     mx, my = before[0] + after[0], before[1] + after[1]
     length = math.hypot(mx, my) or 1.0
     mx, my = mx / length, my / length
-    reach = half / max(mx * after[0] + my * after[1], 1 / _MITER_LIMIT)
+    cosine = mx * after[0] + my * after[1]
+    inner = turn * outer_turn < 0
+    if inner and cosine > 0 and half * math.sqrt(1 - cosine * cosine) / cosine <= room:
+        return [(point[0] + mx * half / cosine, point[1] + my * half / cosine)]
+    if inner:
+        return [first, point, last]
+    reach = half / max(cosine, 1 / _MITER_LIMIT)
     return [(point[0] + mx * reach, point[1] + my * reach)]
 
 
