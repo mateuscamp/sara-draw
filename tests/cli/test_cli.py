@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 
 from ai_draw.cli import main
-from ai_draw.io.png import read_png
+from ai_draw.grid.canvas import Canvas
+from ai_draw.io.png import read_png, write_png
 
 SCENE = """
 from ai_draw.geometry.path import ellipse
@@ -90,3 +91,30 @@ def draw() -> Canvas:
     assert main(["palette", str(write_scene(tmp_path, source)), "--near", "5"]) == 0
     lines = capsys.readouterr().out.splitlines()
     assert lines == ["#c82828  2 px", "#cc2a28  1 px", "near: #c82828 #cc2a28"]
+
+
+def test_lint_reports_and_fails_on_a_finding(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = """
+from ai_draw.grid.canvas import Canvas
+
+
+def draw() -> Canvas:
+    canvas = Canvas(3, 3)
+    canvas.paint(1, 1, (200, 40, 40, 255))
+    return canvas
+"""
+    assert main(["lint", str(write_scene(tmp_path, source))]) == 1
+    assert "loose pixels: 1" in capsys.readouterr().out.splitlines()
+
+
+def test_lint_reads_a_png_and_passes_a_clean_one(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    clean = Canvas(2, 1)
+    clean.rect(0, 0, 2, 1, (200, 40, 40, 255))
+    target = tmp_path / "clean.png"
+    write_png(clean, target)
+    assert main(["lint", str(target)]) == 0
+    assert "loose pixels: 0" in capsys.readouterr().out.splitlines()

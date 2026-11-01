@@ -7,6 +7,7 @@ A scene is a Python file with a ``draw()`` that returns a ``Canvas``::
     ai-draw render scene.py -o out/big.png
     ai-draw watch scene.py --scale 8           # redraws on every save, shown in imv
     ai-draw palette scene.py --near 10         # colors in use, and the pairs this close
+    ai-draw lint sprite.png --line '#221c28'   # pixel-art defects; exit 1 if any
 """
 
 from __future__ import annotations
@@ -16,10 +17,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ai_draw.grid.palette import collect, near_pairs, to_hex
+from ai_draw.grid.palette import collect, near_pairs, parse_hex, to_hex
 from ai_draw.io.live import INTERVAL, LiveSession, open_imv, run
-from ai_draw.io.png import write_png
+from ai_draw.io.png import read_png, write_png
 from ai_draw.io.scene import SceneError, load_scene
+from ai_draw.lint import lint
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -38,6 +40,8 @@ class _Arguments(argparse.Namespace):
     no_viewer: bool = False
     once: bool = False
     near: int | None = None
+    line: tuple[int, int, int, int] | None = None
+    width: int = 1
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -55,6 +59,11 @@ def _parser() -> argparse.ArgumentParser:
     palette = commands.add_parser("palette", help="list a scene's colors and near pairs")
     _ = palette.add_argument("scene", type=Path, help="Python file with draw() -> Canvas")
     _ = palette.add_argument("--near", type=int, default=None, help="list pairs this close")
+    lint = commands.add_parser("lint", help="count pixel-art defects in a scene or a PNG")
+    _ = lint.add_argument("scene", type=Path, help="scene .py or picture .png")
+    _ = lint.add_argument("--line", type=parse_hex, default=None, help="line color, #rrggbb")
+    _ = lint.add_argument("--width", type=int, default=1, help="line width in pixels")
+    _ = lint.add_argument("--near", type=int, default=10, help="near colors tolerance")
     return parser
 
 
@@ -100,9 +109,26 @@ def _palette(arguments: _Arguments) -> int:
     return 0
 
 
+def _lint(arguments: _Arguments) -> int:
+    try:
+        picture = arguments.scene
+        canvas = read_png(picture) if picture.suffix == ".png" else load_scene(picture)
+    except (SceneError, ValueError, OSError) as error:
+        _say(str(error))
+        return EXIT_SCENE_ERROR
+    near = 10 if arguments.near is None else arguments.near
+    findings = lint(canvas, line=arguments.line, width=arguments.width, near=near)
+    for finding in findings:
+        detail = f" ({finding.detail})" if finding.detail else ""
+        print(f"{finding.check}: {finding.count}{detail}")  # noqa: T201 - the command's output
+    return 1 if any(finding.count for finding in findings) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point of ``ai-draw``; returns the exit code."""
     arguments = _parser().parse_args(argv, namespace=_Arguments())
+    if arguments.command == "lint":
+        return _lint(arguments)
     if arguments.command == "palette":
         return _palette(arguments)
     return _watch(arguments) if arguments.command == "watch" else _render(arguments)

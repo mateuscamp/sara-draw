@@ -17,7 +17,7 @@ PACKAGE = "ai_draw"
 PACKAGE_DIR = ROOT / "src" / PACKAGE
 SPDX = "# SPDX-License-Identifier: GPL-3.0-only"
 # Every Python file the repository ships: the package, its tests and the examples.
-SOURCE_FOLDERS = (PACKAGE_DIR, ROOT / "tests", ROOT / "examples")
+SOURCE_FOLDERS = (PACKAGE_DIR, ROOT / "tests", ROOT / "examples", ROOT / "docs" / "gallery")
 
 # ADR-0001: the layers each layer may import. Modules right under ai_draw/ (cli.py,
 # __init__.py) stitch the layers together and may import any of them.

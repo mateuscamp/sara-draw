@@ -2,11 +2,15 @@
 name = "ai-draw"
 version = "0.0.0"
 description = "Vector drawing for Python with two outputs: smooth antialiasing and rule-abiding pixel art."
+readme = "README.md"
 authors = [{ name = "Mateus Campelo" }]
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.1", "pillow>=11"]
+
+[project.urls]
+Repository = "https://github.com/mateuscamp/ai-draw"
 
 [project.scripts]
 ai-draw = "ai_draw.cli:main"
@@ -18,6 +22,7 @@ dev = [
     "freetype-py>=2.5",
     "pytest>=8.4",
     "ruff>=0.13",
+    "scikit-image>=0.25",
 ]
 
 [build-system]
@@ -43,6 +48,7 @@ ban-relative-imports = "all" # AGENTS.md: imports are absolute
 
 [tool.ruff.lint.per-file-ignores]
 "examples/**" = ["INP001"] # examples are scripts run by ai-draw, not a package
+"docs/gallery/**" = ["INP001", "T201"] # scripts that build the README's picture and table
 "tests/**" = [
     "S101",   # assert is how pytest checks
     "D",      # test names say what they check

@@ -4,8 +4,8 @@
 Small detail is where no rule replaces choosing each pixel, so the map is the drawing; the
 library only adds the one-pixel outline around the silhouette::
 
-    uv run ai-draw render examples/potion.py --scale 10
-    uv run ai-draw watch examples/potion.py --scale 10
+    uv run ai-draw render examples/pixel/potion.py --scale 10
+    uv run ai-draw watch examples/pixel/potion.py --scale 10
 """
 
 from ai_draw.grid.canvas import Canvas, Color

@@ -285,9 +285,18 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   com raio 100 em 29 ms, traço de 2 px em 37 ms. Montado ao lado da saída pixel, o anel
   suave lê redondo e o pixel, octogonal.
 
+- Fase 8 (01/11): portfólio. `README.md` em inglês, com a imagem comparativa
+  (`docs/gallery/compare.png`: `skimage.draw`, raster cru, ai-draw pixel e suave) e a tabela de
+  defeitos que `docs/gallery/scores.py` gera; `tests/test_gallery.py` reprova a imagem ou a
+  tabela desatualizadas e roda o exemplo de código do README. `ai-draw lint` (meio alfa, pixel
+  solto, cores quase iguais e, com `--line`, as verificações de linha; sai com 1 se achar
+  algo). Exemplos em `examples/pixel/` (paleta fechada obrigatória; poção e moeda) e
+  `examples/smooth/` (moeda suave). Entrou o `scikit-image` (só teste), o último da emenda do
+  ADR-0002. Medido: o raster cru repete o placar de partida da bancada; o `skimage.draw` sai
+  limpo nas retas e deixa 8 cantos em L e 40 de wobble nos círculos e a ponta da estrela solta.
+  A wheel instala num Python 3.11 limpo e o `ai-draw` roda.
+
 ## Próximo passo
 
-Fase 8: portfólio. README com antes/depois (raster cru, `skimage.draw`, ai-draw pixel e
-suave), galeria e exemplos novos, e `ai-draw lint` com os detectores. A regra "todo exemplo
-declara PALETTE" vale para a saída pixel; exemplo suave vai precisar de uma pasta ou de uma
-marca própria. Pendente: detector de redondeza para a saída pixel.
+Fase 9: `/code-audit` sobre o pacote inteiro. Pendente, registrado no README em "Limits":
+círculos grandes de 1 px leem octogonais e nenhum detector mede redondeza.
