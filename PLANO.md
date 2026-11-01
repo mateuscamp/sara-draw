@@ -306,6 +306,16 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   ADR-0005; Hypothesis adiado para depois da fase 9. O grep de supressão da skill não pegava
   diretiva de arquivo do pyright; o portão daqui pega.
 
+- Fase 9 (01/11): `/code-audit` do pacote inteiro em `c7fc3db`, com três revisores
+  independentes e cada achado reproduzido. Resolvidos, com teste de regressão visto falhar
+  antes: G1 (o laço de degraus oscilava: 142 s num círculo de raio 220, agora 0,01 s), G2
+  (configuração solta desligava o portão), A1 (a ponte juntava formas separadas; a revisão
+  do conjunto pegou a regressão da própria correção nos anéis finos), A2 (entalhe na quina
+  interna do traço suave), A3 (a catraca agora compara com o commit anterior) e A4 (códigos
+  de saída do `lint`: 0 limpo, 1 defeito, 2 entrada inválida). Pendentes, sem autorização
+  ainda: os achados médios e baixos do relatório da fase, e um novo, que já existia:
+  círculos de 1 px a partir do raio 40 têm wobble, e a partir do 200, assimetria.
+
 ## Próximo passo
 
 Fase 9: `/code-audit` sobre o pacote inteiro. Pendente, registrado no README em "Limits":
