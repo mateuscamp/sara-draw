@@ -24,7 +24,8 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 - Proibido: `ImageDraw`, `Image.resize`. Ampliar é `Canvas.enlarged` (vizinho mais próximo).
 - Canvas é `ndarray` uint8 (altura, largura, 4), RGBA, dono `grid/canvas.py`.
 - Aritmética de array (comparar, reduzir, `np.pad`) só em `grid/arrays.py`, atrás de função
-  com tipo exato: é o único arquivo dispensado do modo estrito.
+  com tipo exato: é o único arquivo do pacote dispensado do modo estrito. Nos testes, só
+  `tests/support/freetype_oracle.py` (o fontTools não tem tipos).
 - Pixel (x, y) amostrado em (x + 0,5, y + 0,5); intervalo semiaberto em y; y para baixo.
 - Saída pixel: alfa só 0 ou 255.
 - Import sempre absoluto (`from ai_draw.grid import canvas`); relativo reprova.
@@ -95,7 +96,7 @@ src/ai_draw/
   geometry/   path, transform           (Python puro)
   grid/       canvas, arrays, noise, rows, outline, compare, palette   (numpy)
   pixel/      fill, line, steps, stroke, rounded, cleanup, defects
-  smooth/     coverage, stroke
+  smooth/     coverage (fill), stroke    (referência: FreeType 32×, tests/support)
   io/         png, scene, live          (único com disco e PIL)
   cli.py
 tests/<camada>/ · tests/architecture/ · tests/bench/ · tests/support/ (regras e bancada, importáveis)

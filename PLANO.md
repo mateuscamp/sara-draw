@@ -272,8 +272,22 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   --near N`. Fitness: todo exemplo público declara `PALETTE` e não pode usar cor fora dela
   (`tests/examples`); a poção passou a declarar a dela, com os mesmos pixels.
 
+- Fase 7 (31/10): saída suave. `smooth/coverage.py` dá a área exata de cada pixel dentro
+  da forma (área com sinal acumulada por linha, o método do font-rs), com curvas achatadas a
+  8 segmentos por pixel (`Path.contours(segments_per_pixel=...)`), e compõe a cor por
+  cobertura (`grid/arrays.blend`). `smooth/stroke.py` desloca os dois lados do caminho,
+  com ponta redonda, junta redonda do lado de fora das quinas e quina viva do lado de
+  dentro. Achado ao medir: o FreeType na resolução da imagem achata curvas grosseiramente e
+  erra até 28/255 no coração; o oráculo dos testes passou a ser o FreeType 32× maior, com
+  média por bloco, que fica a 0,73/255 da nossa cobertura. Meta cumprida: coração (nonzero
+  e evenodd), curva e contorno da onda a ≤ 1/255 do oráculo. A emenda do ADR-0002 foi
+  aceita; entraram `fonttools` e `freetype-py` (só teste). Tempo, 256×256: preenchimento
+  com raio 100 em 29 ms, traço de 2 px em 37 ms. Montado ao lado da saída pixel, o anel
+  suave lê redondo e o pixel, octogonal.
+
 ## Próximo passo
 
-Fase 7: saída suave (`smooth/coverage.py`, cobertura exata por célula; traço por offset);
-meta: coração e onda a ≤ 1/255 por canal do `FreeTypePen` (dependência só de teste, emenda
-proposta no ADR-0002, a aceitar antes). Pendente da fase 4: detector de redondeza.
+Fase 8: portfólio. README com antes/depois (raster cru, `skimage.draw`, ai-draw pixel e
+suave), galeria e exemplos novos, e `ai-draw lint` com os detectores. A regra "todo exemplo
+declara PALETTE" vale para a saída pixel; exemplo suave vai precisar de uma pasta ou de uma
+marca própria. Pendente: detector de redondeza para a saída pixel.

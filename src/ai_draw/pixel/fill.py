@@ -13,8 +13,9 @@ pixels.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Literal, NamedTuple, get_args
+from typing import TYPE_CHECKING, NamedTuple, get_args
 
+from ai_draw.geometry.path import FillRule
 from ai_draw.pixel.cleanup import bridge_gaps
 from ai_draw.pixel.line import line_cells
 
@@ -24,8 +25,7 @@ if TYPE_CHECKING:
     from ai_draw.geometry.path import Contour, Path
     from ai_draw.grid.canvas import Canvas, Color
 
-FillRule = Literal["nonzero", "evenodd"]
-"""SVG's fill rules: "nonzero" counts edge direction, "evenodd" only the crossings."""
+__all__ = ["FillRule", "Span", "fill", "spans"]
 
 
 class Span(NamedTuple):

@@ -68,3 +68,24 @@ def color_counts(pixels: NDArray[np.uint8]) -> dict[tuple[int, int, int, int], i
         (int(r), int(g), int(b), int(a)): int(count)
         for (r, g, b, a), count in zip(colors.tolist(), counts.tolist(), strict=True)
     }
+
+
+def blend(
+    pixels: NDArray[np.uint8], coverage: list[list[float]], color: tuple[int, int, int, int]
+) -> None:
+    """Paint ``color`` over ``pixels`` in place, each pixel weighted by its coverage (0 to 1).
+
+    Source-over on straight (not premultiplied) alpha; untouched where the coverage is 0.
+    """
+    weight = np.asarray(coverage, dtype=np.float64) * (color[3] / 255)
+    ground = pixels.astype(np.float64) / 255
+    ground_alpha = ground[:, :, 3]
+    alpha = weight + ground_alpha * (1 - weight)
+    paint = np.asarray(color[:3], dtype=np.float64) / 255
+    mixed = (
+        paint * weight[:, :, None] + ground[:, :, :3] * (ground_alpha * (1 - weight))[:, :, None]
+    )
+    rgb = mixed / np.where(alpha > 0, alpha, 1)[:, :, None]
+    result = np.floor(np.concatenate([rgb, alpha[:, :, None]], axis=2) * 255 + 0.5)
+    touched = weight > 0
+    pixels[touched] = result[touched].astype(np.uint8)

@@ -24,7 +24,9 @@ if TYPE_CHECKING:
     from ai_draw.geometry.transform import Transform
 
 Point = tuple[float, float]
-_Kind = Literal["move", "line", "quad", "cubic", "close"]
+CommandKind = Literal["move", "line", "quad", "cubic", "close"]
+FillRule = Literal["nonzero", "evenodd"]
+"""SVG's fill rules: "nonzero" counts edge direction, "evenodd" only the crossings."""
 
 # Fraction of the radius that puts the control points of a quarter ellipse on the arc:
 # 4/3 * (sqrt(2) - 1). Largest error 0.027% of the radius, invisible in pixels.
@@ -48,8 +50,10 @@ class Contour:
 
 
 @dataclass(frozen=True, slots=True)
-class _Command:
-    kind: _Kind
+class Command:
+    """One drawing command and its points: the end point last, control points before it."""
+
+    kind: CommandKind
     points: tuple[Point, ...]
 
 
@@ -58,15 +62,15 @@ class Path:
 
     def __init__(self) -> None:
         """Start an empty path; the first command must be ``move_to``."""
-        self._commands: list[_Command] = []
+        self._commands: list[Command] = []
 
-    def _add(self, kind: _Kind, *points: Point) -> Self:
+    def _add(self, kind: CommandKind, *points: Point) -> Self:
         if kind != "move":
             last = self._commands[-1] if self._commands else None
             if last is None or last.kind == "close":
                 message = f"{kind} without a starting point: begin the subpath with move_to(x, y)"
                 raise ValueError(message)
-        self._commands.append(_Command(kind, points))
+        self._commands.append(Command(kind, points))
         return self
 
     def move_to(self, x: float, y: float) -> Self:
@@ -103,13 +107,25 @@ class Path:
         """A copy with every point passed through ``transform``."""
         copy = Path()
         copy._commands = [
-            _Command(command.kind, tuple(transform.apply(x, y) for x, y in command.points))
+            Command(command.kind, tuple(transform.apply(x, y) for x, y in command.points))
             for command in self._commands
         ]
         return copy
 
-    def contours(self) -> list[Contour]:
-        """The subpaths flattened into polygons."""
+    @property
+    def commands(self) -> tuple[Command, ...]:
+        """The commands as written, for replaying the path elsewhere (a renderer, a file)."""
+        return tuple(self._commands)
+
+    def contours(self, segments_per_pixel: int = 1) -> list[Contour]:
+        """The subpaths flattened into polygons.
+
+        The pixel output takes one segment per pixel of curve; the smooth output asks for more,
+        so the chord stays well within one step of coverage.
+        """
+        if segments_per_pixel < 1:
+            message = f"segments_per_pixel={segments_per_pixel!r}, expected an integer >= 1"
+            raise ValueError(message)
         flattened: list[tuple[list[Point], bool]] = []
         for command in self._commands:
             if command.kind == "move":
@@ -119,18 +135,18 @@ class Path:
             elif command.kind == "line":
                 flattened[-1][0].extend(command.points)
             else:
-                _flatten_curve(flattened[-1][0], command.points)
+                _flatten_curve(flattened[-1][0], command.points, segments_per_pixel)
         return [Contour(tuple(points), closed) for points, closed in flattened]
 
 
-def _segments(controls: Sequence[Point]) -> int:
-    """One segment per pixel of the control polygon, which is never shorter than the curve."""
+def _segments(controls: Sequence[Point], per_pixel: int) -> int:
+    """``per_pixel`` segments per pixel of the control polygon, never shorter than the curve."""
     # A plain running sum, not sum(): since Python 3.12 sum() compensates rounding, and the
     # segment count must match the Lua original bit for bit at the ceil.
     length = 0.0
     for (x0, y0), (x1, y1) in itertools.pairwise(controls):
         length += math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
-    return max(1, min(MAX_SEGMENTS, math.ceil(length)))
+    return max(1, min(MAX_SEGMENTS * per_pixel, math.ceil(length * per_pixel)))
 
 
 def _curve_point(controls: Sequence[Point], t: float) -> Point:
@@ -144,9 +160,9 @@ def _curve_point(controls: Sequence[Point], t: float) -> Point:
     return xs[0], ys[0]
 
 
-def _flatten_curve(points: list[Point], curve: tuple[Point, ...]) -> None:
+def _flatten_curve(points: list[Point], curve: tuple[Point, ...], per_pixel: int) -> None:
     controls = [points[-1], *curve]
-    segments = _segments(controls)
+    segments = _segments(controls, per_pixel)
     points.extend(_curve_point(controls, step / segments) for step in range(1, segments))
     # The last point is the exact end, not the computed one: the curve then joins the next
     # command without the floating-point residue of t = 1.

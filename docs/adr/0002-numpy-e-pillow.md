@@ -45,9 +45,10 @@ a comparação de teste é de pixels, não de bytes (regra de ofício: mesmo res
 
 Regra derivada no `AGENTS.md`: "Dependências". Dependência nova exige ADR.
 
-## Emenda proposta (31/10): dependências só de teste
+## Emenda (31/10): dependências só de teste
 
-**Status:** Proposto. Grupo `dev` do `pyproject.toml`, nunca instaladas com o pacote:
+**Status:** Aceito pelo Mateus em 31/10, ao começar a fase 7. Entram quando usadas:
+`fonttools` e `freetype-py` na fase 7; `scikit-image` quando a bancada comparar com ele. Grupo `dev` do `pyproject.toml`, nunca instaladas com o pacote:
 `fonttools` + `freetype-py` (oráculo da saída suave, fase 7) e `scikit-image` (linha de base
 "pixel duro sem regras" da bancada, fase 3). Ganha: referência externa em vez de gabarito
 feito por nós. Perde: `uv sync` mais pesado (~60 MB). Governança: o teste de fronteira

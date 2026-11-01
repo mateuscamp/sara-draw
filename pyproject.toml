@@ -12,7 +12,13 @@ dependencies = ["numpy>=2.1", "pillow>=11"]
 ai-draw = "ai_draw.cli:main"
 
 [dependency-groups]
-dev = ["basedpyright>=1.30", "pytest>=8.4", "ruff>=0.13"]
+dev = [
+    "basedpyright>=1.30",
+    "fonttools>=4.60",
+    "freetype-py>=2.5",
+    "pytest>=8.4",
+    "ruff>=0.13",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.9,<0.12.0"]

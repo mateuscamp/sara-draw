@@ -92,3 +92,8 @@ def test_transformed_moves_every_point_and_keeps_the_original() -> None:
     moved = square.transformed(Transform.translate(2, 3))
     assert moved.contours() == [Contour(((2, 3), (3, 3), (3, 4), (2, 4)), closed=True)]
     assert square.contours() == [Contour(((0, 0), (1, 0), (1, 1), (0, 1)), closed=True)]
+
+
+def test_finer_flattening_multiplies_the_segments() -> None:
+    (contour,) = Path().move_to(0, 0).quad_to(5, 0, 10, 0).contours(segments_per_pixel=4)
+    assert len(contour.points) == 41
