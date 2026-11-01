@@ -188,5 +188,10 @@ def differences(recorded: dict[str, Score], measured: dict[str, Score]) -> list[
 
 
 def worse(recorded: dict[str, Score], measured: dict[str, Score]) -> list[str]:
-    """The changes that would raise the score: the ratchet refuses them."""
-    return [line for line in differences(recorded, measured) if line.endswith("(worse)")]
+    """The changes the ratchet refuses: a metric that went up, or one that disappeared.
+
+    A metric or case that disappears would stop guarding what it measured (audit A3); taking
+    one out of the bench is a decision for an ADR, not a side effect.
+    """
+    refused = ("(worse)", "(gone)")
+    return [line for line in differences(recorded, measured) if line.endswith(refused)]

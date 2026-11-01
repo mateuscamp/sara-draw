@@ -89,7 +89,8 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 
 - `tests/bench/` mede os detectores de `pixel/defects.py` sobre a bancada fixa de
   `tests/support/bench_cases.py`; o placar fica em `tests/bench/score.json` e só pode descer
-  (catraca). Todo detector é 0 em pixel art limpa.
+  (catraca). Todo detector é 0 em pixel art limpa. O teste também compara com o placar do
+  commit anterior: métrica que sobe ou some reprova, mesmo com o `score.json` editado à mão.
 - Melhoria de pixel compara contra a saída atual com o mesmo número de etapas, nunca contra o raster cru.
 - Baixar o placar: rode `uv run pytest tests/bench --update-score` e mostre o antes e o depois no relatório.
 

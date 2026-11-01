@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import json
+import subprocess
 from pathlib import Path
 from typing import cast
 
@@ -9,6 +10,7 @@ from bench_cases import Score, differences, measure, worse
 
 SCORE = Path(__file__).with_name("score.json")
 UPDATE_HINT = "if it only got better: uv run pytest tests/bench --update-score"
+REPOSITORY = SCORE.parents[2]
 
 
 def recorded_score() -> dict[str, Score]:
@@ -54,3 +56,42 @@ def test_the_ratchet_refuses_only_what_got_worse() -> None:
 def test_a_metric_that_did_not_exist_is_new_not_worse() -> None:
     assert differences({}, {"star": {"orphans": 4}}) == ["star.orphans: None -> 4 (new)"]
     assert worse({}, {"star": {"orphans": 4}}) == []
+
+
+def test_the_ratchet_refuses_a_case_or_metric_that_disappears() -> None:
+    # Regression (audit A3, 01/11): dropping a metric or renaming a case hid a regression.
+    recorded = {"star": {"orphans": 0, "l_corners": 0}, "wave": {"thickness": 0}}
+    measured = {"star": {"orphans": 0}}
+    assert worse(recorded, measured) == [
+        "star.l_corners: 0 -> None (gone)",
+        "wave.thickness: 0 -> None (gone)",
+    ]
+
+
+def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603  # motivo: fixed git arguments, no shell
+        ["git", *arguments],  # noqa: S607  # motivo: git from PATH, as the gate runs it
+        cwd=REPOSITORY,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def committed_score() -> dict[str, Score]:
+    """The score of the commit under this change: HEAD when score.json has uncommitted edits,
+    the parent of HEAD otherwise (the CI checks out the commit itself, and needs depth 2).
+    """
+    edited = _git("diff", "--quiet", "HEAD", "--", "tests/bench/score.json").returncode != 0
+    base = "HEAD" if edited else "HEAD~1"
+    shown = _git("show", f"{base}:tests/bench/score.json")
+    assert shown.returncode == 0 or "exists on disk, but not in" in shown.stderr, shown.stderr
+    if shown.returncode != 0:
+        return {}
+    return cast("dict[str, Score]", json.loads(shown.stdout))  # motivo: a committed score.json
+
+
+def test_the_score_is_never_worse_than_the_committed_one() -> None:
+    # Regression (audit A3, 01/11): editing or deleting score.json by hand let a regression in.
+    refused = worse(committed_score(), measure())
+    assert not refused, "worse than the committed score:\n" + "\n".join(refused)
