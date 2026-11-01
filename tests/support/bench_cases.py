@@ -42,7 +42,7 @@ def filled(size: tuple[int, int], path: Path, rule: FillRule = "nonzero") -> Cel
     return cells_of(canvas)
 
 
-def stroked(size: tuple[int, int], path: Path, width: float) -> Cells:
+def stroked(size: tuple[int, int], path: Path, width: int) -> Cells:
     canvas = Canvas(*size)
     stroke(canvas, path, INK, width)
     return cells_of(canvas)

@@ -74,3 +74,8 @@ def test_circles_of_every_small_radius_are_mirror_images_without_l(radius: int) 
     assert asymmetric_cells(cells, mirror_x=center, mirror_y=center) == 0
     assert l_corners(cells) == 0
     assert wobble(cells, 1) == 0
+
+
+def test_curve_that_only_touches_a_pixel_edge_stays_on_its_own_side() -> None:
+    dip = Path().move_to(0.5, 1).line_to(4, 3).line_to(7.5, 1)
+    assert max(y for _, y in line_cells(dip)) == 2

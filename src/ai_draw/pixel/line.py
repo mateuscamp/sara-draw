@@ -42,6 +42,21 @@ def _area(points: Sequence[Point]) -> float:
     )
 
 
+def contour_side(contour: Contour) -> float:
+    """``1.0`` when the inside of ``contour`` is to its left on screen (y down), else ``-1.0``.
+
+    An open contour has no inside; its left counts as one, consistently.
+    """
+    return -1.0 if contour.closed and _area(contour.points) < 0 else 1.0
+
+
+def _neighbors(points: Sequence[Point], index: int, *, closed: bool) -> list[Point]:
+    last = len(points) - 1
+    before = [points[index - 1]] if closed or index > 0 else []
+    after = [points[(index + 1) % len(points)]] if closed or index < last else []
+    return before + after
+
+
 def _tangent(points: Sequence[Point], index: int, *, closed: bool) -> Point:
     last = len(points) - 1
     before = points[index - 1] if closed or index > 0 else points[index]
@@ -49,7 +64,22 @@ def _tangent(points: Sequence[Point], index: int, *, closed: bool) -> Point:
     return after[0] - before[0], after[1] - before[1]
 
 
-def _axis_cells(value: float, inward: float, forward: float) -> list[int]:
+def _touch(value: float, neighbors: list[float]) -> int:
+    """Tell which side of a pixel edge the path's neighbors are on, when it only touches it.
+
+    1 past the edge, -1 before it; 0 off an edge or when the path crosses it.
+    """
+    snapped = round(value, _SNAP_DECIMALS)
+    edge = math.floor(snapped)
+    sides = {
+        (round(n, _SNAP_DECIMALS) > edge) - (round(n, _SNAP_DECIMALS) < edge) for n in neighbors
+    }
+    if snapped != edge or len(sides) != 1:
+        return 0
+    return sides.pop()
+
+
+def _axis_cells(value: float, inward: float, forward: float, touch: int = 0) -> list[int]:
     """The pixel holding ``value``, or two of them on the tip of a symmetric shape.
 
     On a pixel edge it is the pixel on the ``inward`` side. When the path runs along the edge's
@@ -57,6 +87,8 @@ def _axis_cells(value: float, inward: float, forward: float) -> list[int]:
     """
     snapped = round(value, _SNAP_DECIMALS)
     edge = math.floor(snapped)
+    if touch:
+        return [edge if touch > 0 else edge - 1]
     if snapped != edge or inward > 0:
         return [edge]
     if inward < 0:
@@ -67,12 +99,13 @@ def _axis_cells(value: float, inward: float, forward: float) -> list[int]:
 def _cells_of_points(contour: Contour) -> list[list[Cell]]:
     """Per point, its pixels: one, or two on the tip of a symmetric shape."""
     points = contour.points
-    side = -1.0 if contour.closed and _area(points) < 0 else 1.0
+    side = contour_side(contour)
     cells: list[list[Cell]] = []
     for index, (x, y) in enumerate(points):
         tx, ty = _tangent(points, index, closed=contour.closed)
-        columns = _axis_cells(x, -ty * side, tx)
-        rows = _axis_cells(y, tx * side, ty)
+        near = _neighbors(points, index, closed=contour.closed)
+        columns = _axis_cells(x, -ty * side, tx, _touch(x, [p[0] for p in near]))
+        rows = _axis_cells(y, tx * side, ty, _touch(y, [p[1] for p in near]))
         cells.append(_own_end([(c, r) for c in columns for r in rows], index, contour))
     return cells
 
@@ -178,7 +211,7 @@ def _drop_l_corners(cells: list[Cell], kept_corners: set[Cell], contour: Contour
     two overlapping Ls share a pixel, and dropping the first one met would turn a circle
     drawn clockwise into a slightly twisted ring.
     """
-    side = -1.0 if contour.closed and _area(contour.points) < 0 else 1.0
+    side = contour_side(contour)
     deviations: dict[Cell, tuple[float, bool]] = {}
 
     def worst_first(index: int) -> tuple[float, bool, Cell]:
@@ -204,7 +237,8 @@ def _without_repeated_end(contour: Contour) -> Contour:
     return contour
 
 
-def _contour_cells(contour: Contour) -> list[Cell]:
+def contour_line(contour: Contour) -> list[Cell]:
+    """The pixels of the one-pixel line along ``contour``, in the order the contour runs."""
     if not contour.points:
         return []
     contour = _without_repeated_end(contour)
@@ -221,7 +255,7 @@ def _contour_cells(contour: Contour) -> list[Cell]:
 
 def line_cells(path: Path) -> set[Cell]:
     """The pixels of a one-pixel line along ``path``."""
-    return {cell for contour in path.contours() for cell in _contour_cells(contour)}
+    return {cell for contour in path.contours() for cell in contour_line(contour)}
 
 
 def line(canvas: Canvas, path: Path, color: Color) -> None:

@@ -34,7 +34,7 @@
     "wobble": 0
   },
   "star_fill_evenodd": {
-    "extra_components": 1,
+    "extra_components": 0,
     "orphans": 0
   },
   "star_fill_nonzero": {
@@ -46,6 +46,6 @@
     "extra_components": 0,
     "orphans": 0,
     "thickness": 0,
-    "wobble": 10
+    "wobble": 0
   }
 }

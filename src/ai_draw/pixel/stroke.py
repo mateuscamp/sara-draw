@@ -1,90 +1,135 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Stroke as fillable pieces: a quad per segment and a disc on every vertex.
+"""Stroke of N pixels: a brush stamped along the pixel-perfect one-pixel line.
 
-This is the baseline the pixel-art line of phase 4 has to beat: at low resolution the
-width of a stroke drawn this way swells and thins, and its steps come out uneven.
+The brush follows the line's slope. Where the line runs flat it is a column of N pixels,
+where it runs steep a row of N, and on a 45-degree stretch a square: so a flat or steep
+stretch keeps exactly N pixels across, and a diagonal one keeps about N. An even width
+cannot center on a pixel; its extra pixel goes to the outside of the curve, which keeps a
+closed shape's stroke centered on the curve and mirror-symmetric.
 
-Separate pieces, not one polygon: each is painted over the others in the same color, so
-overlaps do not matter. One merged polygon would need every piece oriented alike, or
-"nonzero" would open a hole where two segments cross.
-
-    >>> from ai_draw.geometry.path import Path
+    >>> from ai_draw.geometry.path import ellipse
     >>> from ai_draw.grid.canvas import Canvas
-    >>> canvas = Canvas(8, 8)
-    >>> stroke(canvas, Path().move_to(1, 1).line_to(6, 6), (0, 0, 0, 255), 1)
+    >>> canvas = Canvas(24, 24)
+    >>> stroke(canvas, ellipse(12, 12, 8), (20, 20, 20, 255), 2)
 """
 
 from __future__ import annotations
 
-import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
-from ai_draw.geometry.path import Contour, Point
-from ai_draw.pixel.fill import spans
-from ai_draw.pixel.line import line
+from ai_draw.pixel.line import contour_line, contour_side, line
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from ai_draw.geometry.path import Path
+    from ai_draw.geometry.path import Contour, Path
     from ai_draw.grid.canvas import Canvas, Color
 
-MIN_DISC_SIDES = 8
+Cell = tuple[int, int]
+Brush = Literal["column", "row", "square"]
+_Lean = Literal["flat", "steep"]
 
 
-def disc(cx: float, cy: float, radius: float) -> Contour:
-    """Disc as a polygon, with a side per pixel of perimeter and at least eight.
+def _lean(start: Cell, end: Cell) -> _Lean | None:
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    if dy == 0 and dx != 0:
+        return "flat"
+    if dx == 0 and dy != 0:
+        return "steep"
+    return None
 
-    The polygon sits inside the circle, and the error stays under half a pixel.
+
+def _last_seen(leans: list[_Lean | None], *, closed: bool) -> list[_Lean | None]:
+    """For each step, the latest flat or steep step at or before it (around, if closed)."""
+    seen: _Lean | None = None
+    latest: list[_Lean | None] = [None] * len(leans)
+    for _ in range(2 if closed else 1):
+        for index, lean in enumerate(leans):
+            seen = lean or seen
+            latest[index] = seen
+    return latest
+
+
+def _brush(near: set[_Lean | None]) -> Brush | None:
+    kinds = near - {None}
+    if kinds == {"flat"}:
+        return "column"
+    if kinds == {"steep"}:
+        return "row"
+    return "square" if kinds else None
+
+
+def brushes(cells: list[Cell], *, closed: bool) -> list[Brush]:
+    """The brush for each cell of a one-pixel line.
+
+    The steps right next to the cell decide; a cell between two diagonal steps looks for the
+    nearest flat or steep step on each side, and a 45-degree stretch between a flat and a
+    steep one gets the square.
     """
-    sides = max(MIN_DISC_SIDES, math.ceil(2 * math.pi * radius))
-    points: list[Point] = []
-    for side in range(sides):
-        angle = 2 * math.pi * side / sides
-        points.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
-    return Contour(tuple(points), closed=True)
+    ends = [*cells[1:], cells[0]] if closed else cells[1:]
+    leans: list[_Lean | None] = [_lean(a, b) for a, b in zip(cells, ends, strict=False)]
+    before = _last_seen(leans, closed=closed)
+    after = _last_seen(leans[::-1], closed=closed)[::-1]
+    count = len(leans)
+    chosen: list[Brush] = []
+    for index in range(len(cells)):
+        into = index - 1 if closed or index > 0 else None
+        out = index if index < count else None
+        here: set[_Lean | None] = {leans[i] for i in (into, out) if i is not None}
+        nearby: set[_Lean | None] = {before[into] if into is not None else None}
+        nearby.add(after[out] if out is not None else None)
+        chosen.append(_brush(here) or _brush(nearby) or "square")
+    return chosen
 
 
-def _quad(start: Point, end: Point, half: float) -> Contour | None:
-    """The quad of a segment, ``half`` the width to each side; None for a zero-length one."""
-    (x0, y0), (x1, y1) = start, end
-    dx, dy = x1 - x0, y1 - y0
-    length = math.sqrt(dx * dx + dy * dy)
-    if length == 0:
-        return None
-    nx, ny = -dy / length * half, dx / length * half
-    corners = ((x0 + nx, y0 + ny), (x1 + nx, y1 + ny), (x1 - nx, y1 - ny), (x0 - nx, y0 - ny))
-    return Contour(corners, closed=True)
+def _outward(cells: list[Cell], index: int, side: float, *, closed: bool) -> tuple[int, int]:
+    """The signs of the outward normal at ``cells[index]``, from its neighbors."""
+    last = len(cells) - 1
+    before = cells[index - 1] if closed or index > 0 else cells[index]
+    after = cells[(index + 1) % len(cells)] if closed or index < last else cells[index]
+    tx, ty = after[0] - before[0], after[1] - before[1]
+    out_x, out_y = ty * side, -tx * side
+    return (-1 if out_x < 0 else 1), (-1 if out_y < 0 else 1)
 
 
-def _contour_pieces(contour: Contour, half: float) -> list[Contour]:
-    points = contour.points
-    segment_count = len(points) if contour.closed else len(points) - 1
-    quads = [
-        _quad(points[index], points[(index + 1) % len(points)], half)
-        for index in range(segment_count)
-    ]
-    discs = [disc(x, y, half) for x, y in points]
-    return [quad for quad in quads if quad is not None] + discs
+def _offsets(width: int, outward: int) -> list[int]:
+    """The brush's reach across the line; an even width leans ``outward``."""
+    if width % 2:
+        return list(range(-(width // 2), width // 2 + 1))
+    return [outward * step for step in range(-(width // 2 - 1), width // 2 + 1)]
 
 
-def stroke_pieces(contours: Sequence[Contour], width: float) -> list[Contour]:
-    """The stroke of ``contours`` as pieces to fill one by one with "nonzero"."""
-    if width <= 0:
-        message = f"width={width!r}, expected a positive number"
+def _stamp(cell: Cell, brush: Brush, width: int, outward: tuple[int, int]) -> list[Cell]:
+    x, y = cell
+    across_x, across_y = _offsets(width, outward[0]), _offsets(width, outward[1])
+    if brush == "column":
+        return [(x, y + dy) for dy in across_y]
+    if brush == "row":
+        return [(x + dx, y) for dx in across_x]
+    return [(x + dx, y + dy) for dx in across_x for dy in across_y]
+
+
+def contour_stroke(contour: Contour, width: int) -> set[Cell]:
+    """The pixels of a ``width``-pixel stroke along ``contour``."""
+    cells = contour_line(contour)
+    side = contour_side(contour)
+    painted: set[Cell] = set()
+    for index, brush in enumerate(brushes(cells, closed=contour.closed)):
+        outward = _outward(cells, index, side, closed=contour.closed)
+        painted.update(_stamp(cells[index], brush, width, outward))
+    return painted
+
+
+def stroke(canvas: Canvas, path: Path, color: Color, width: int) -> None:
+    """Stroke ``path`` with a line ``width`` whole pixels wide.
+
+    One pixel is the pixel-perfect line of ``ai_draw.pixel.line``; wider lines stamp a brush
+    along it.
+    """
+    if width < 1 or not float(width).is_integer():
+        message = f"width={width!r}, expected a whole number of pixels >= 1"
         raise ValueError(message)
-    return [piece for contour in contours for piece in _contour_pieces(contour, width / 2)]
-
-
-def stroke(canvas: Canvas, path: Path, color: Color, width: float) -> None:
-    """Stroke ``path`` with ``width`` pixels.
-
-    One pixel is the pixel-perfect line of ``ai_draw.pixel.line``; wider strokes are still
-    quads and discs, with round caps and joins.
-    """
     if width == 1:
         line(canvas, path, color)
         return
-    for piece in stroke_pieces(path.contours(), width):
-        for span in spans([piece], "nonzero", canvas.height):
-            canvas.span(span.x, span.y, span.length, color)
+    painted = {cell for contour in path.contours() for cell in contour_stroke(contour, width)}
+    for x, y in sorted(painted):
+        canvas.paint(x, y, color)

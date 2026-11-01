@@ -15,6 +15,9 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, Literal, NamedTuple, get_args
 
+from ai_draw.pixel.cleanup import bridge_gaps
+from ai_draw.pixel.line import line_cells
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -118,13 +121,46 @@ def spans(contours: Sequence[Contour], rule: FillRule, height: int) -> list[Span
     ]
 
 
+def _pieces(found: list[Span]) -> int:
+    """Count the pieces the spans make, joined by any of the eight neighbors.
+
+    A quick count that spares the bridge search when the fill is in one piece.
+    """
+    parent = list(range(len(found)))
+
+    def root(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    by_row: dict[int, list[int]] = {}
+    for index, span in enumerate(found):
+        by_row.setdefault(span.y, []).append(index)
+    for index, span in enumerate(found):
+        for other in by_row.get(span.y + 1, []):
+            below = found[other]
+            if below.x <= span.x + span.length and span.x <= below.x + below.length:
+                parent[root(index)] = root(other)
+    return len({root(index) for index in range(len(found))})
+
+
 def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -> None:
     """Fill ``path`` on ``canvas`` with ``rule`` ("nonzero" by default, as in SVG).
+
+    A part thinner than a pixel, such as where a star's tips meet, keeps the fill in one
+    piece: the shape's own one-pixel outline bridges the gap (``ai_draw.pixel.cleanup``).
 
     >>> from ai_draw.geometry.path import ellipse
     >>> from ai_draw.grid.canvas import Canvas
     >>> canvas = Canvas(32, 32)
     >>> fill(canvas, ellipse(16, 16, 10, 6), (200, 40, 40, 255))
     """
-    for span in spans(path.contours(), rule, canvas.height):
+    found = spans(path.contours(), rule, canvas.height)
+    for span in found:
         canvas.span(span.x, span.y, span.length, color)
+    if _pieces(found) < 2:  # noqa: PLR2004 - one piece needs no bridge
+        return
+    filled = {(x, span.y) for span in found for x in range(span.x, span.x + span.length)}
+    for x, y in sorted(bridge_gaps(filled, line_cells(path)) - filled):
+        canvas.paint(x, y, color)

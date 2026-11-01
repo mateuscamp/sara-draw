@@ -93,7 +93,7 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 src/ai_draw/
   geometry/   path, transform           (Python puro)
   grid/       canvas, arrays, noise, rows, outline, compare, palette   (numpy)
-  pixel/      fill, line, steps, stroke, rounded, defects (fase 5: cleanup, snap)
+  pixel/      fill, line, steps, stroke, rounded, cleanup, defects
   smooth/     coverage, stroke
   io/         png, scene, live          (único com disco e PIL)
   cli.py

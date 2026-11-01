@@ -47,18 +47,26 @@ def orphans(cells: Cells) -> int:
     return sum(1 for cell in cells if not any(near in cells for near in _neighbors(cell)))
 
 
+def component_labels(cells: Cells) -> dict[Cell, int]:
+    """Number each piece, joined by any of the eight neighbors, from the top-left one."""
+    labels: dict[Cell, int] = {}
+    for start in sorted(cells, key=lambda cell: (cell[1], cell[0])):
+        if start in labels:
+            continue
+        piece = len(set(labels.values()))
+        labels[start] = piece
+        frontier = [start]
+        while frontier:
+            near = [cell for cell in _neighbors(frontier.pop()) if cell in cells]
+            fresh = [cell for cell in near if cell not in labels]
+            labels.update(dict.fromkeys(fresh, piece))
+            frontier.extend(fresh)
+    return labels
+
+
 def components(cells: Cells) -> int:
     """Count the pieces, joined by any of the eight neighbors: a broken tip adds one."""
-    unseen = set(cells)
-    count = 0
-    while unseen:
-        count += 1
-        frontier = [unseen.pop()]
-        while frontier:
-            near = [cell for cell in _neighbors(frontier.pop()) if cell in unseen]
-            unseen.difference_update(near)
-            frontier.extend(near)
-    return count
+    return len(set(component_labels(cells).values()))
 
 
 def _is_l_corner(cell: Cell, cells: Cells) -> bool:
@@ -105,19 +113,6 @@ def _covered_by_blocks(cells: Cells, side: int) -> set[Cell]:
         if all(cell in cells for cell in block):
             covered.update(block)
     return covered
-
-
-def thickness_defects(cells: Cells, width: int) -> int:
-    """Count where a stroke of ``width`` thins or swells, judged as a square brush would draw it.
-
-    Too thin: a cell inside no ``width`` x ``width`` block of the stroke. Too thick: a cell
-    inside some block one pixel wider. A diagonal drawn with the brush passes both.
-    """
-    if width < 1:
-        message = f"width={width!r}, expected an integer >= 1"
-        raise ValueError(message)
-    thin = len(cells - _covered_by_blocks(cells, width))
-    return thin + len(_covered_by_blocks(cells, width + 1))
 
 
 Run = tuple[int, int]
@@ -188,6 +183,36 @@ def _bumps(lengths: list[int]) -> int:
     """Count the a, b, a triples: a width that changes and comes right back."""
     triples = zip(lengths, lengths[1:], lengths[2:], strict=False)
     return sum(1 for before, middle, after in triples if before == after != middle)
+
+
+def _run_lengths(cells: Cells, *, by_rows: bool) -> dict[Cell, int]:
+    """For each cell, the length of its run in its row (or column)."""
+    lengths: dict[Cell, int] = {}
+    for line, runs in _across_runs(cells, by_rows=by_rows, longest=len(cells) + 1).items():
+        for first, last in runs:
+            for position in range(first, last + 1):
+                cell = (position, line) if by_rows else (line, position)
+                lengths[cell] = last - first + 1
+    return lengths
+
+
+def thickness_defects(cells: Cells, width: int) -> int:
+    """Count where a stroke of ``width`` thins or swells.
+
+    Too thin: a cell whose runs across the stroke (its row and column runs no longer than
+    ``width + 1``) are all shorter than ``width``. A steep stroke staggered row by row keeps
+    its width; a flat stroke with a one-pixel column does not. Too thick: a cell inside a
+    block ``width + 1`` pixels on each side, the blob at a joint.
+    """
+    if width < 1:
+        message = f"width={width!r}, expected an integer >= 1"
+        raise ValueError(message)
+    rows, columns = _run_lengths(cells, by_rows=True), _run_lengths(cells, by_rows=False)
+    thin = 0
+    for cell in cells:
+        across = [n for n in (rows[cell], columns[cell]) if n <= width + 1]
+        thin += bool(across) and max(across) < width
+    return thin + len(_covered_by_blocks(cells, width + 1))
 
 
 def wobble(cells: Cells, width: int) -> int:

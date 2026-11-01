@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import math
 from typing import cast
 
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from ai_draw.geometry.path import Path, polygon, rect
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
+from ai_draw.pixel.defects import cells_of, components
 from ai_draw.pixel.fill import FillRule, Span, fill, spans
 
 INK: Color = (20, 20, 20, 255)
@@ -54,3 +56,11 @@ def test_empty_path_has_no_spans() -> None:
 def test_unknown_rule_is_an_error() -> None:
     with pytest.raises(ValueError, match="nonzero"):
         _ = spans(rect(0, 0, 1, 1).contours(), cast("FillRule", cast("object", "winding")), 4)
+
+
+def test_evenodd_star_keeps_its_tips_joined() -> None:
+    tips = [math.radians(-90 + tip * 144) for tip in range(5)]
+    star = polygon([(16 + 14 * math.cos(a), 16 + 14 * math.sin(a)) for a in tips])
+    canvas = Canvas(32, 32)
+    fill(canvas, star, INK, "evenodd")
+    assert components(cells_of(canvas)) == 1

@@ -252,7 +252,20 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   Observado montado: círculos grandes (r ≥ 11) leem um pouco octogonais, a passagem do topo
   plano para os degraus é brusca; nenhuma métrica mede redondeza ainda.
 
+- Fase 5 (31/10): traço de N px por pincel ao longo da linha de 1 px (`pixel/stroke.py`): coluna
+  de N onde a linha corre deitada, linha de N onde corre em pé, quadrado nos trechos a 45°; em
+  largura par o px extra vai para fora da curva, e o anel sai centrado e espelhado. A parte
+  fina (`pixel/cleanup.py`): quando as faixas do preenchimento dão mais de uma peça, as células
+  do próprio contorno de 1 px que tocam duas peças religam a folga, e só elas. Dois ajustes
+  vieram da fase, cada um com teste visto falhar antes: "fino" no detector passou a ser a
+  célula cujas corridas transversais são mais curtas que a largura (o escalonado de um traço
+  íngreme mantém 2 px por linha e deixou de contar), e o ponto que só encosta numa divisa de
+  pixel fica do lado dos vizinhos (o fundo do vale fazia calombo). Placar: estrela evenodd
+  1 → 0 componente a mais, onda de 2 px 10 → 0 de wobble; nada subiu. Tempo, cena 256×256:
+  traço de 2 px num círculo de raio 100 em 41 ms, preenchimento em 12 ms.
+
 ## Próximo passo
 
-Fase 5: traço de N px por carimbo de pincel ao longo da linha de 1 px, parte fina e limpeza.
-Meta: estrela evenodd em 1 componente; onda de 2 px com `wobble` e espessura em 0.
+Fase 6: paleta (levantar cores, pares quase iguais, famílias, fundir, quantizar sem
+pontilhado); meta: cor fora da paleta reprova. Pendente da fase 4: círculos grandes leem
+octogonais, e falta um detector de redondeza.

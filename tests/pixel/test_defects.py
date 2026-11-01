@@ -81,8 +81,13 @@ def test_line_of_its_own_width_has_no_thickness_defect() -> None:
     assert thickness_defects(cells("####", "####"), 2) == 0
 
 
-def test_cells_outside_every_width_block_are_too_thin() -> None:
-    assert thickness_defects(cells("####", "#.##"), 2) == 3
+def test_a_cell_whose_runs_across_are_shorter_than_the_width_is_too_thin() -> None:
+    # (1, 0): its column is 1 pixel tall across a 2-pixel line that runs flat
+    assert thickness_defects(cells("####", "#.##"), 2) == 1
+
+
+def test_a_steep_stroke_staggered_row_by_row_keeps_its_width() -> None:
+    assert thickness_defects(cells("##..", ".##.", "..##"), 2) == 0
 
 
 def test_cells_inside_a_block_wider_than_the_width_are_too_thick() -> None:

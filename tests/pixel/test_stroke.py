@@ -1,54 +1,65 @@
 # SPDX-License-Identifier: GPL-3.0-only
-import math
-
 import pytest
 
-from ai_draw.geometry.path import Path, rect
+from ai_draw.geometry.path import Path, ellipse
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
-from ai_draw.pixel.defects import cells_of, l_corners
-from ai_draw.pixel.stroke import disc, stroke, stroke_pieces
+from ai_draw.pixel.defects import (
+    asymmetric_cells,
+    cells_of,
+    components,
+    l_corners,
+    thickness_defects,
+    wobble,
+)
+from ai_draw.pixel.stroke import stroke
 
 INK: Color = (20, 20, 20, 255)
 LEGEND = {"#": INK}
 
 
+def stroked(path: Path, size: tuple[int, int], width: int) -> Canvas:
+    canvas = Canvas(*size)
+    stroke(canvas, path, INK, width)
+    return canvas
+
+
 def test_one_pixel_line_on_a_row_center_paints_that_row() -> None:
-    canvas = Canvas(6, 3)
-    stroke(canvas, Path().move_to(0, 1.5).line_to(4, 1.5), INK, 1)
+    canvas = stroked(Path().move_to(0, 1.5).line_to(4, 1.5), (6, 3), 1)
     assert to_rows(canvas, LEGEND) == ["......", "####..", "......"]
 
 
-def test_open_path_gets_a_quad_per_segment_and_a_disc_per_vertex() -> None:
-    pieces = stroke_pieces(Path().move_to(0, 0).line_to(4, 0).line_to(4, 4).contours(), 2)
-    assert len(pieces) == 2 + 3
-
-
-def test_closed_path_also_strokes_the_closing_segment() -> None:
-    assert len(stroke_pieces(rect(0, 0, 4, 4).contours(), 2)) == 4 + 4
-
-
-def test_zero_length_segment_gets_only_its_discs() -> None:
-    assert len(stroke_pieces(Path().move_to(1, 1).line_to(1, 1).contours(), 2)) == 2
-
-
-def test_disc_has_a_side_per_pixel_of_perimeter_and_at_least_eight() -> None:
-    assert len(disc(0, 0, 0.5).points) == 8
-    assert len(disc(0, 0, 10).points) == math.ceil(2 * math.pi * 10)
-
-
-def test_disc_stays_within_its_radius() -> None:
-    assert all(math.hypot(x, y) <= 3 + 1e-9 for x, y in disc(0, 0, 3).points)
-
-
-@pytest.mark.parametrize("width", [0, -1])
-def test_stroke_width_must_be_positive(width: float) -> None:
-    with pytest.raises(ValueError, match="width"):
-        _ = stroke_pieces(rect(0, 0, 1, 1).contours(), width)
-
-
 def test_one_pixel_stroke_is_the_pixel_perfect_line() -> None:
-    canvas = Canvas(9, 5)
-    stroke(canvas, Path().move_to(0.5, 0.5).line_to(8.5, 4.5), INK, 1)
+    canvas = stroked(Path().move_to(0.5, 0.5).line_to(8.5, 4.5), (9, 5), 1)
     assert l_corners(cells_of(canvas)) == 0
     assert to_rows(canvas, LEGEND)[0] == "##......."
+
+
+def test_two_pixel_line_on_a_pixel_edge_takes_a_row_on_each_side() -> None:
+    canvas = stroked(Path().move_to(1, 2).line_to(7, 2), (8, 4), 2)
+    assert to_rows(canvas, LEGEND) == ["........", ".######.", ".######.", "........"]
+
+
+def test_three_pixel_line_through_pixel_centers_is_centered() -> None:
+    canvas = stroked(Path().move_to(1, 2.5).line_to(7, 2.5), (8, 5), 3)
+    expected = ["........", ".######.", ".######.", ".######.", "........"]
+    assert to_rows(canvas, LEGEND) == expected
+
+
+def test_two_pixel_curve_keeps_its_width_steady() -> None:
+    wave = Path().move_to(3, 12).quad_to(9, 2, 15, 12).quad_to(21, 22, 27, 12)
+    cells = cells_of(stroked(wave, (30, 24), 2))
+    assert (components(cells), thickness_defects(cells, 2), wobble(cells, 2)) == (1, 0, 0)
+
+
+@pytest.mark.parametrize("width", [2, 3])
+def test_thick_circle_is_a_steady_symmetric_ring(width: int) -> None:
+    cells = cells_of(stroked(ellipse(12, 12, 7), (24, 24), width))
+    assert asymmetric_cells(cells, mirror_x=12, mirror_y=12) == 0
+    assert (components(cells), thickness_defects(cells, width), wobble(cells, width)) == (1, 0, 0)
+
+
+@pytest.mark.parametrize("width", [0, -1, 1.5])
+def test_stroke_width_is_a_whole_number_of_pixels(width: float) -> None:
+    with pytest.raises(ValueError, match="width"):
+        stroke(Canvas(4, 4), Path().move_to(0, 0).line_to(3, 3), INK, width)  # pyright: ignore[reportArgumentType] - the bad value is the point
