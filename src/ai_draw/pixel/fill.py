@@ -12,13 +12,14 @@ pixels.
 
 from __future__ import annotations
 
+import itertools
 import math
 from typing import TYPE_CHECKING, NamedTuple, get_args
 
 from ai_draw.errors import SettingError
 from ai_draw.geometry.path import FillRule
 from ai_draw.pixel.cleanup import bridge_gaps
-from ai_draw.pixel.line import line_cells
+from ai_draw.pixel.line import contour_line
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -150,7 +151,8 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
     """Fill ``path`` on ``canvas`` with ``rule`` ("nonzero" by default, as in SVG).
 
     A part thinner than a pixel, such as where a star's tips meet, keeps the fill in one
-    piece: the shape's own one-pixel outline bridges the gap (``ai_draw.pixel.cleanup``).
+    piece: the contour's own one-pixel outline bridges the gap (``ai_draw.pixel.cleanup``).
+    Separate contours are never bridged to each other.
 
     >>> from ai_draw.geometry.path import ellipse
     >>> from ai_draw.grid.canvas import Canvas
@@ -162,6 +164,46 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
         canvas.span(span.x, span.y, span.length, color)
     if _pieces(found) < 2:  # noqa: PLR2004  # motivo: one piece needs no bridge
         return
-    filled = {(x, span.y) for span in found for x in range(span.x, span.x + span.length)}
-    for x, y in sorted(bridge_gaps(filled, line_cells(path)) - filled):
+    filled = _cells(found)
+    for x, y in sorted(_bridges(filled, path, rule, canvas.height)):
         canvas.paint(x, y, color)
+
+
+def _cells(found: list[Span]) -> set[tuple[int, int]]:
+    return {(x, span.y) for span in found for x in range(span.x, span.x + span.length)}
+
+
+def _overlapping_groups(owns: list[set[tuple[int, int]]]) -> list[list[int]]:
+    """Group the contours whose own fills share a cell.
+
+    A hole and the outline around it share cells, and so do overlapping parts of one shape;
+    shapes side by side share none.
+    """
+    group_of = list(range(len(owns)))
+    for first, second in itertools.combinations(range(len(owns)), 2):
+        if owns[first] & owns[second]:
+            old_group, new_group = group_of[second], group_of[first]
+            group_of = [new_group if g == old_group else g for g in group_of]
+    groups: dict[int, list[int]] = {}
+    for index, group in enumerate(group_of):
+        groups.setdefault(group, []).append(index)
+    return list(groups.values())
+
+
+def _bridges(
+    filled: set[tuple[int, int]], path: Path, rule: FillRule, height: int
+) -> set[tuple[int, int]]:
+    """The outline cells that join pieces of one shape, never two shapes.
+
+    A shape is a group of contours whose own fills overlap (``_overlapping_groups``): a star
+    alone, a ring with its hole. Each shape bridges only its own pieces, with its own
+    outlines, so two shapes side by side stay apart however close (audit A1).
+    """
+    contours = path.contours()
+    owns = [_cells(spans([contour], rule, height)) for contour in contours]
+    added: set[tuple[int, int]] = set()
+    for group in _overlapping_groups(owns):
+        own = filled & set().union(*(owns[index] for index in group))
+        outline = [cell for index in group for cell in contour_line(contours[index])]
+        added |= bridge_gaps(own, outline) - own
+    return added

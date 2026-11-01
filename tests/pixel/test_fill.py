@@ -4,7 +4,7 @@ from typing import cast
 
 import pytest
 
-from ai_draw.geometry.path import Path, polygon, rect
+from ai_draw.geometry.path import Path, ellipse, polygon, rect
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
 from ai_draw.pixel.defects import cells_of, components
@@ -64,4 +64,22 @@ def test_evenodd_star_keeps_its_tips_joined() -> None:
     star = polygon([(16 + 14 * math.cos(a), 16 + 14 * math.sin(a)) for a in tips])
     canvas = Canvas(32, 32)
     fill(canvas, star, INK, "evenodd")
+    assert components(cells_of(canvas)) == 1
+
+
+def test_separate_shapes_close_together_in_one_path_stay_apart() -> None:
+    # Regression (audit A1, 01/11): the thin-part bridge joined two subpaths 1 to 2 px apart.
+    two_rects = rect(0.5, 0, 4, 4).extend(rect(5.5, 0, 4, 4))
+    assert filled(two_rects, (12, 4))[0] == "####.####..."
+    eyes = ellipse(3.5, 4, 2.6).extend(ellipse(9.5, 4, 2.6))
+    canvas = Canvas(14, 8)
+    fill(canvas, eyes, INK)
+    assert components(cells_of(canvas)) == 2
+
+
+def test_a_thin_ring_drawn_as_two_contours_stays_in_one_piece() -> None:
+    # Regression of the A1 fix, caught by the post-audit (01/11): the ring's gaps are bridged
+    # by the outline of its hole, which is another contour of the same shape.
+    canvas = Canvas(30, 30)
+    fill(canvas, ellipse(15, 15, 12).extend(ellipse(15, 15, 11.5)), INK, "evenodd")
     assert components(cells_of(canvas)) == 1
