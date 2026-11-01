@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from architecture_rules import (
     MAX_FILE_LINES,
     MAX_FUNCTION_LINES,
@@ -25,6 +27,7 @@ from architecture_rules import (
     size_violations,
     source_paths,
     spdx_violations,
+    stray_configs,
 )
 
 if TYPE_CHECKING:
@@ -183,3 +186,17 @@ def test_errors_imports_no_other_layer(tmp_path: Path) -> None:
     violations = import_violations(package_dir)
     assert len(violations) == 1
     assert "imports 'ai_draw.grid.canvas'" in violations[0]
+
+
+@pytest.mark.parametrize(
+    "name", ["pyrightconfig.json", "pytest.ini", "src/ai_draw/pixel/.ruff.toml"]
+)
+def test_stray_tool_config_is_flagged(tmp_path: Path, name: str) -> None:
+    planted = tmp_path / name
+    planted.parent.mkdir(parents=True, exist_ok=True)
+    _ = planted.write_text("", encoding="utf-8")
+    assert stray_configs(tmp_path) == [name]
+
+
+def test_tools_read_their_settings_only_from_pyproject() -> None:
+    assert stray_configs(ROOT) == []

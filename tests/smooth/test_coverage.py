@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import pytest
-from bench_cases import heart
-from freetype_oracle import freetype_coverage
 
 from ai_draw.geometry.path import Path, polygon, rect
 from ai_draw.smooth.coverage import coverage
+from bench_cases import heart
+from freetype_oracle import freetype_coverage
 
 # The reference returns coverage in steps of 1/255: closer than one step is a match.
 ONE_STEP = 1 / 255

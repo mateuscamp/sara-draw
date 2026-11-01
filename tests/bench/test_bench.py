@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+
 from bench_cases import Score, differences, measure, worse
 
 SCORE = Path(__file__).with_name("score.json")

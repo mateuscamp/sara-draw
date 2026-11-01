@@ -263,3 +263,20 @@ def make_package(tmp_path: Path, files: dict[str, str]) -> Path:
 
 def source_paths() -> list[Path]:
     return [path for folder in SOURCE_FOLDERS for path in python_files(folder)]
+
+
+# ADR-0005, audit G2: a tool reads its own file before pyproject.toml, so one stray file would
+# switch a gate step off and the gate would still say "approved".
+STRAY_CONFIGS = frozenset(
+    {".ruff.toml", "ruff.toml", "pyrightconfig.json", "pytest.ini", "tox.ini", "setup.cfg"}
+)
+_NOT_SCANNED = frozenset({".git", ".venv", "node_modules", "__pycache__"})
+
+
+def stray_configs(root: Path) -> list[str]:
+    """Tool settings files anywhere under ``root``: they must live in pyproject.toml."""
+    return sorted(
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.name in STRAY_CONFIGS and not _NOT_SCANNED & set(path.relative_to(root).parts)
+    )

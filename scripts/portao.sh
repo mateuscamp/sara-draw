@@ -18,10 +18,12 @@ etapa "lock em dia com o pyproject"
 uv lock --check
 
 etapa "formatação"
-uv run --locked ruff format --check .
+# Settings come only from pyproject.toml: a stray .ruff.toml, pyrightconfig.json or pytest.ini
+# would otherwise switch a step off (audit G2; tests/architecture also rejects such files).
+uv run --locked ruff format --check --config pyproject.toml .
 
 etapa "lint"
-uv run --locked ruff check .
+uv run --locked ruff check --config pyproject.toml .
 
 etapa "supressão sem motivo"
 # Supressão de linha: `# noqa: S603  # motivo: ...` ou `# pyright: ignore[regra]  # motivo: ...`.
@@ -45,10 +47,10 @@ if [[ -n "$sem_motivo" ]]; then
 fi
 
 etapa "tipos"
-uv run --locked basedpyright
+uv run --locked basedpyright -p pyproject.toml
 
 etapa "testes"
-uv run --locked pytest
+uv run --locked pytest -c pyproject.toml
 
 if ! $rapido; then
   etapa "dependências com vulnerabilidade conhecida"

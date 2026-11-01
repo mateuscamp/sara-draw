@@ -2,12 +2,12 @@
 import math
 
 import pytest
-from bench_cases import wave
-from freetype_oracle import freetype_coverage
 
 from ai_draw.geometry.path import Path, Point, ellipse
 from ai_draw.smooth.coverage import coverage
 from ai_draw.smooth.stroke import stroke_outline
+from bench_cases import wave
+from freetype_oracle import freetype_coverage
 
 ONE_STEP = 1 / 255
 

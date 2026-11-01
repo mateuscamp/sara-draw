@@ -70,6 +70,7 @@ Revisitar se um upgrade do Ruff reprovar mais de uma vez por mês.
 | portão inteiro | `scripts/portao.sh` | `make check`, hook Stop (`--rapido`), CI | qualquer etapa reprova |
 | supressão com motivo | grep/awk do portão | idem | `noqa`, `pyright: ignore` ou diretiva de arquivo sem `# motivo:` |
 | `errors` sob todas as camadas | `tests/architecture` | pytest | `errors` importa outra camada, ou camada fora da tabela |
+| configuração só no `pyproject.toml` (auditoria G2, 01/11) | `tests/architecture` e o portão passando o `pyproject.toml` a cada ferramenta | `make check`, hook, CI | existe `.ruff.toml`, `ruff.toml`, `pyrightconfig.json`, `pytest.ini`, `tox.ini` ou `setup.cfg` |
 | ninguém afrouxa o portão | `AGENTS.md` e `/code-audit` | revisão | mudança em `[tool.ruff]`, `[tool.basedpyright]` ou `[tool.pytest]` sem ADR |
 
 Regra derivada no `AGENTS.md`: seção "Python".
