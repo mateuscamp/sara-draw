@@ -118,3 +118,44 @@ def test_lint_reads_a_png_and_passes_a_clean_one(
     write_png(clean, target)
     assert main(["lint", str(target)]) == 0
     assert "loose pixels: 0" in capsys.readouterr().out.splitlines()
+
+
+# Regression (audit A4, 01/11): lint exits 0 when clean and 1 on a finding, so a bad input
+# must not look like either; it exits 2, like the other commands' scene errors.
+CLEAN_SCENE = """
+from ai_draw.grid.canvas import Canvas
+
+
+def draw() -> Canvas:
+    canvas = Canvas(2, 1)
+    canvas.rect(0, 0, 2, 1, (200, 40, 40, 255))
+    return canvas
+"""
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--line", "#ff00ff"],
+        ["--line", "#c82828", "--width", "0"],
+    ],
+    ids=["line color not in the picture", "width 0"],
+)
+def test_lint_with_a_bad_setting_exits_2(tmp_path: Path, arguments: list[str]) -> None:
+    assert main(["lint", str(write_scene(tmp_path, CLEAN_SCENE)), *arguments]) == 2
+
+
+@pytest.mark.parametrize("command", ["lint", "render", "palette"])
+def test_a_scene_that_does_not_run_exits_2(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], command: str
+) -> None:
+    assert main([command, str(write_scene(tmp_path, "def draw(:\n"))]) == 2
+    assert "SyntaxError" in capsys.readouterr().err
+
+
+def test_lint_reads_a_png_whatever_the_case_of_its_suffix(tmp_path: Path) -> None:
+    clean = Canvas(2, 1)
+    clean.rect(0, 0, 2, 1, (200, 40, 40, 255))
+    target = tmp_path / "CLEAN.PNG"
+    write_png(clean, target)
+    assert main(["lint", str(target)]) == 0

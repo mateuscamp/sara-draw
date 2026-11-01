@@ -22,6 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import ColorError
 from ai_draw.grid.palette import collect, near_pairs, to_hex
 from ai_draw.pixel.defects import (
     cells_of,
@@ -68,6 +69,10 @@ def _near(canvas: Canvas, tolerance: int) -> Finding:
 
 def _line(canvas: Canvas, color: Color, width: int) -> list[Finding]:
     cells = cells_of(canvas, color)
+    if not cells:
+        # A typo in the line color would zero every line check and pass as clean (audit A4).
+        message = f"line color {to_hex(color)} is not in the picture, expected one of its colors"
+        raise ColorError(message)
     return [
         Finding("L corners", l_corners(cells), ""),
         Finding("wobble", wobble(cells, width), ""),

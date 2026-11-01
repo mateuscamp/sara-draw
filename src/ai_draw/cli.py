@@ -112,12 +112,13 @@ def _palette(arguments: _Arguments) -> int:
 def _lint(arguments: _Arguments) -> int:
     try:
         picture = arguments.scene
-        canvas = read_png(picture) if picture.suffix == ".png" else load_scene(picture)
-    except (SceneError, ValueError, OSError) as error:
+        canvas = read_png(picture) if picture.suffix.lower() == ".png" else load_scene(picture)
+        near = 10 if arguments.near is None else arguments.near
+        findings = lint(canvas, line=arguments.line, width=arguments.width, near=near)
+    except (ValueError, OSError) as error:
+        # 0 is clean and 1 is a finding, so a bad input exits 2 (audit A4).
         _say(str(error))
         return EXIT_SCENE_ERROR
-    near = 10 if arguments.near is None else arguments.near
-    findings = lint(canvas, line=arguments.line, width=arguments.width, near=near)
     for finding in findings:
         detail = f" ({finding.detail})" if finding.detail else ""
         print(f"{finding.check}: {finding.count}{detail}")  # noqa: T201  # motivo: the command's output

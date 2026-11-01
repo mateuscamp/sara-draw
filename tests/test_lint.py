@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import pytest
+
+from ai_draw.errors import ColorError
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import from_rows
 from ai_draw.lint import Finding, lint
@@ -40,3 +43,11 @@ def test_a_line_color_adds_the_line_checks() -> None:
 
 def test_an_empty_canvas_is_clean() -> None:
     assert [finding.count for finding in lint(Canvas(3, 3))] == [0, 0, 0]
+
+
+def test_a_line_color_that_is_not_in_the_picture_is_an_error() -> None:
+    # Regression (audit A4, 01/11): a typo in --line zeroed every line check and passed.
+    sprite = from_rows(["kk"], {"k": INK})
+    with pytest.raises(ValueError, match="#ff00ff") as caught:
+        _ = lint(sprite, line=(255, 0, 255, 255))
+    assert isinstance(caught.value, ColorError)

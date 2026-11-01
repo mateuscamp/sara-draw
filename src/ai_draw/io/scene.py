@@ -28,6 +28,16 @@ class SceneError(DrawingError):
     """The scene file does not give a canvas."""
 
 
+def _run(scene: Path) -> object:
+    with _importable_from(scene.resolve().parent):
+        namespace: dict[str, object] = runpy.run_path(str(scene))
+        draw = namespace.get("draw")
+        if not callable(draw):
+            message = f"{scene}: no draw() function, expected def draw() -> Canvas"
+            raise SceneError(message)
+        return draw()
+
+
 @contextmanager
 def _importable_from(folder: Path) -> Generator[None]:
     """Let the scene import the modules next to it, as a script run from its folder would."""
@@ -40,14 +50,18 @@ def _importable_from(folder: Path) -> Generator[None]:
 
 
 def load_scene(scene: Path) -> Canvas:
-    """Run ``scene`` and return the canvas its ``draw()`` gives."""
-    with _importable_from(scene.resolve().parent):
-        namespace: dict[str, object] = runpy.run_path(str(scene))
-        draw = namespace.get("draw")
-        if not callable(draw):
-            message = f"{scene}: no draw() function, expected def draw() -> Canvas"
-            raise SceneError(message)
-        canvas = draw()
+    """Run ``scene`` and return the canvas its ``draw()`` gives.
+
+    Whatever goes wrong inside the scene, which is the user's code (a syntax error, a missing
+    file, an exception in ``draw()``), comes out as a ``SceneError`` that names it.
+    """
+    try:
+        canvas = _run(scene)
+    except SceneError:
+        raise
+    except Exception as error:  # the scene is user code: any failure in it is a scene error
+        message = f"{scene}: {type(error).__name__}: {error}"
+        raise SceneError(message) from error
     if not isinstance(canvas, Canvas):
         message = f"{scene}: draw() returned {type(canvas).__name__}, expected a Canvas"
         raise SceneError(message)
