@@ -18,6 +18,8 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, Self
 
+from ai_draw.errors import GeometryError, SettingError
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -69,7 +71,7 @@ class Path:
             last = self._commands[-1] if self._commands else None
             if last is None or last.kind == "close":
                 message = f"{kind} without a starting point: begin the subpath with move_to(x, y)"
-                raise ValueError(message)
+                raise GeometryError(message)
         self._commands.append(Command(kind, points))
         return self
 
@@ -85,7 +87,7 @@ class Path:
         """Quadratic Bezier: one control point (cx, cy), ending at (x, y)."""
         return self._add("quad", (cx, cy), (x, y))
 
-    def cubic_to(  # noqa: PLR0913, PLR0917 - the six numbers of an SVG C command
+    def cubic_to(  # noqa: PLR0913, PLR0917  # motivo: the six numbers of an SVG C command
         self, c1x: float, c1y: float, c2x: float, c2y: float, x: float, y: float
     ) -> Self:
         """Cubic Bezier: two control points, ending at (x, y)."""
@@ -125,7 +127,7 @@ class Path:
         """
         if segments_per_pixel < 1:
             message = f"segments_per_pixel={segments_per_pixel!r}, expected an integer >= 1"
-            raise ValueError(message)
+            raise SettingError(message)
         flattened: list[tuple[list[Point], bool]] = []
         for command in self._commands:
             if command.kind == "move":
@@ -175,9 +177,9 @@ def polygon(points: Sequence[Point]) -> Path:
     >>> polygon([(0, 0), (4, 0), (0, 3)]).contours()[0].closed
     True
     """
-    if len(points) < 3:  # noqa: PLR2004 - a polygon has at least three corners
+    if len(points) < 3:  # noqa: PLR2004  # motivo: a polygon has at least three corners
         message = f"polygon with {len(points)} points, expected at least 3 points"
-        raise ValueError(message)
+        raise GeometryError(message)
     path = Path().move_to(*points[0])
     for x, y in points[1:]:
         _ = path.line_to(x, y)

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # fontTools ships no type information: its pen and array calls are untyped, and the strict
 # checker would flag every one. This adapter is the only place that touches it.
+# motivo: fontTools has no types (above); this file is the only one that calls it
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 # pyright: reportUnknownArgumentType=false, reportAny=false, reportMissingTypeStubs=false
 """FreeType as the reference for the smooth output: the same path, rasterized by FreeType.
@@ -15,7 +16,7 @@ FreeType reads y growing upward and returns row 0 at the top, so each point's y 
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 import numpy as np
 from fontTools.pens.freetypePen import FreeTypePen
@@ -23,7 +24,7 @@ from fontTools.pens.freetypePen import FreeTypePen
 from ai_draw.geometry.transform import Transform
 
 if TYPE_CHECKING:
-    from ai_draw.geometry.path import Path, Point
+    from ai_draw.geometry.path import CommandKind, Path
 
 
 SUPERSAMPLE = 32
@@ -46,28 +47,33 @@ def freetype_coverage(
 
 def _rasterize(path: Path, width: int, height: int, *, evenodd: bool) -> list[list[float]]:
     pen = FreeTypePen(None)
-
-    def flip(point: Point) -> tuple[float, float]:
-        return point[0], height - point[1]
-
-    started = False
+    left_open = False
     for command in path.commands:
-        points = [flip(point) for point in command.points]
-        if command.kind == "move":
-            if started:
-                pen.closePath()
-            pen.moveTo(points[0])
-            started = True
-        elif command.kind == "line":
-            pen.lineTo(points[0])
-        elif command.kind == "quad":
-            pen.qCurveTo(*points)
-        elif command.kind == "cubic":
-            pen.curveTo(*points)
-        else:
+        # FreeType closes a contour before the next starts; ai-draw fills every contour closed.
+        if command.kind == "move" and left_open:
             pen.closePath()
-            started = False
-    if started:
+        flipped = [(x, height - y) for x, y in command.points]
+        left_open = _replay(pen, command.kind, flipped)
+    if left_open:
         pen.closePath()
     rows: list[list[float]] = pen.array(width=width, height=height, evenOdd=evenodd).tolist()
     return rows
+
+
+def _replay(pen: FreeTypePen, kind: CommandKind, points: list[tuple[float, float]]) -> bool:
+    """Send one command to the pen; return whether a contour is left open."""
+    match kind:
+        case "move":
+            pen.moveTo(points[0])
+        case "line":
+            pen.lineTo(points[0])
+        case "quad":
+            pen.qCurveTo(*points)
+        case "cubic":
+            pen.curveTo(*points)
+        case "close":
+            pen.closePath()
+            return False
+        case _:
+            assert_never(kind)
+    return True

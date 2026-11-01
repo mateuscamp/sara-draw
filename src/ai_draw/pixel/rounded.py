@@ -43,7 +43,7 @@ def _row_inset(row: int, height: int, insets: list[int]) -> int:
     return 0
 
 
-def fill_rounded_rect(  # noqa: PLR0913 - position, size, radius and color
+def fill_rounded_rect(  # noqa: PLR0913  # motivo: position, size, radius and color
     canvas: Canvas, x: int, y: int, width: int, height: int, *, radius: int, color: Color
 ) -> None:
     """Fill a rectangle with rounded corners.

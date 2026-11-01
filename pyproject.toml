@@ -43,6 +43,9 @@ ignore = [
     "D213",   # D212 wins: summary on the first docstring line
 ]
 
+[tool.ruff.lint.mccabe]
+max-complexity = 8  # python-on-rails (ADR-0005)
+
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all" # AGENTS.md: imports are absolute
 
@@ -57,17 +60,23 @@ ban-relative-imports = "all" # AGENTS.md: imports are absolute
 ]
 
 [tool.basedpyright]
-typeCheckingMode = "all"
-pythonVersion = "3.11"
+typeCheckingMode = "all"            # stricter than the trail's "recommended" (ADR-0005)
+pythonVersion = "3.11"              # a library: the oldest Python it supports (ADR-0005)
 include = ["src", "tests", "examples"]
 extraPaths = ["tests/support"]
-# pytest fixtures and test functions are called by name, never imported
-reportUnusedFunction = "none"
+enableTypeIgnoreComments = false    # only `# pyright: ignore[rule]`, which names the rule
+reportIgnoreCommentWithoutRule = "error"
+reportUnnecessaryTypeIgnoreComment = "error"
+failOnWarnings = true               # a warning must fail the gate, not exit 0
 
 [tool.pytest.ini_options]
 # src/ too: the >>> examples in docstrings run as tests, so they cannot rot
 testpaths = ["tests", "src"]
-addopts = ["-q", "--strict-markers", "--import-mode=importlib", "--doctest-modules"]
+addopts = [
+    "-q", "-ra", "--strict-markers", "--strict-config", "--import-mode=importlib",
+    "--doctest-modules",
+]
+filterwarnings = ["error"]   # a deprecation fails today instead of breaking tomorrow
 # shared test code (architecture rules, bench shapes) lives here, importable by name
 pythonpath = ["tests/support"]
 xfail_strict = true

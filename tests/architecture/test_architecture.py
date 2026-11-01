@@ -164,3 +164,22 @@ def test_attribute_rule_flags_pillow_drawing(tmp_path: Path) -> None:
 
 def test_package_avoids_pillow_drawing() -> None:
     assert attribute_violations(python_files(PACKAGE_DIR)) == []
+
+
+def test_every_layer_may_import_errors(tmp_path: Path) -> None:
+    package_dir = make_package(
+        tmp_path,
+        {
+            "errors/__init__.py": "",
+            "pixel/fill.py": "from ai_draw.errors import SettingError\n",
+            "grid/canvas.py": "import ai_draw.errors\n",
+        },
+    )
+    assert import_violations(package_dir) == []
+
+
+def test_errors_imports_no_other_layer(tmp_path: Path) -> None:
+    package_dir = make_package(tmp_path, {"errors/__init__.py": "import ai_draw.grid.canvas\n"})
+    violations = import_violations(package_dir)
+    assert len(violations) == 1
+    assert "imports 'ai_draw.grid.canvas'" in violations[0]

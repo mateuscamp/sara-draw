@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import SettingError
 from ai_draw.geometry.path import Path, polygon
 from ai_draw.smooth.coverage import SEGMENTS_PER_PIXEL, fill
 
@@ -104,7 +105,7 @@ def _join(
 
 def _contour_outline(contour: Contour, half: float) -> list[list[Point]]:
     points = _distinct(contour)
-    if len(points) < 2:  # noqa: PLR2004 - a segment needs two points
+    if len(points) < 2:  # noqa: PLR2004  # motivo: a segment needs two points
         return [[point, *_arc(point, half, 0.0, 2 * math.pi)] for point in points]
     ends = [*points[1:], points[0]] if contour.closed else points[1:]
     normals = [_normal(start, end) for start, end in zip(points, ends, strict=False)]
@@ -124,11 +125,11 @@ def stroke_outline(path: Path, width: float) -> Path:
     """The outline of ``path`` stroked ``width`` pixels wide, round caps and joins."""
     if width <= 0:
         message = f"width={width!r}, expected a positive number of pixels"
-        raise ValueError(message)
+        raise SettingError(message)
     outline = Path()
     for contour in path.contours(segments_per_pixel=SEGMENTS_PER_PIXEL):
         for ring in _contour_outline(contour, width / 2):
-            if len(ring) >= 3:  # noqa: PLR2004 - a polygon has three corners
+            if len(ring) >= 3:  # noqa: PLR2004  # motivo: a polygon has three corners
                 _ = outline.extend(polygon(ring))
     return outline
 

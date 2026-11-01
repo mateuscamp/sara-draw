@@ -62,4 +62,4 @@ def test_thick_circle_is_a_steady_symmetric_ring(width: int) -> None:
 @pytest.mark.parametrize("width", [0, -1, 1.5])
 def test_stroke_width_is_a_whole_number_of_pixels(width: float) -> None:
     with pytest.raises(ValueError, match="width"):
-        stroke(Canvas(4, 4), Path().move_to(0, 0).line_to(3, 3), INK, width)  # pyright: ignore[reportArgumentType] - the bad value is the point
+        stroke(Canvas(4, 4), Path().move_to(0, 0).line_to(3, 3), INK, width)  # pyright: ignore[reportArgumentType]  # motivo: the bad value is the point

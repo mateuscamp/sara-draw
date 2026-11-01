@@ -13,7 +13,10 @@ UPDATE_HINT = "if it only got better: uv run pytest tests/bench --update-score"
 def recorded_score() -> dict[str, Score]:
     if not SCORE.exists():
         return {}
-    return cast("dict[str, Score]", json.loads(SCORE.read_text(encoding="utf-8")))
+    # Only --update-score writes the file, from a dict[str, Score]; a hand edit that breaks the
+    # shape fails the comparison in the test below.
+    text = SCORE.read_text(encoding="utf-8")
+    return cast("dict[str, Score]", json.loads(text))  # motivo: written by --update-score
 
 
 def test_bench_matches_the_recorded_score(request: pytest.FixtureRequest) -> None:

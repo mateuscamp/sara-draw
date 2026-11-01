@@ -195,7 +195,7 @@ def _deviation(cell: Cell, contour: Contour, side: float) -> tuple[float, bool]:
 
 def _l_corner_indexes(cells: list[Cell], kept_corners: set[Cell], *, closed: bool) -> list[int]:
     count = len(cells)
-    middles = range(count) if closed and count > 3 else range(1, count - 1)  # noqa: PLR2004 - a triple
+    middles = range(count) if closed and count > 3 else range(1, count - 1)  # noqa: PLR2004  # motivo: a triple
     return [
         index
         for index in middles

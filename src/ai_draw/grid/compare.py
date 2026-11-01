@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import CanvasError
 from ai_draw.grid.arrays import color_mask, count_differing
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ def diff(first: Canvas, second: Canvas) -> int:
     if (first.width, first.height) != (second.width, second.height):
         sizes = f"{first.width}x{first.height} against {second.width}x{second.height}"
         message = f"size {sizes}, expected the same size"
-        raise ValueError(message)
+        raise CanvasError(message)
     return count_differing(first.pixels, second.pixels)
 
 

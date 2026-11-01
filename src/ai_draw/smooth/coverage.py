@@ -18,6 +18,7 @@ import itertools
 import math
 from typing import TYPE_CHECKING, get_args
 
+from ai_draw.errors import SettingError
 from ai_draw.geometry.path import FillRule
 from ai_draw.grid.arrays import blend
 
@@ -118,7 +119,7 @@ def coverage(path: Path, width: int, height: int, rule: FillRule = "nonzero") ->
     """How much of each pixel ``path`` covers, row by row, from 0 to 1."""
     if rule not in get_args(FillRule):
         message = f"rule={rule!r}, expected 'nonzero' or 'evenodd'"
-        raise ValueError(message)
+        raise SettingError(message)
     # Two spare cells per row: an edge at the right side deposits up to one cell past it.
     cells = [[0.0] * (width + 2) for _ in range(height)]
     for contour in path.contours(segments_per_pixel=SEGMENTS_PER_PIXEL):

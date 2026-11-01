@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
+from ai_draw.errors import CanvasError, ColorError, SettingError
+
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
@@ -31,14 +33,14 @@ _MAX_CHANNEL = 255
 
 def check_color(color: Color) -> Color:
     """Return ``color`` if it is a valid color; raise ValueError saying why otherwise."""
-    channels = cast("tuple[object, ...]", color)
+    channels = cast("tuple[object, ...]", color)  # motivo: untyped callers pass anything
     if len(channels) != _CHANNELS:
         message = f"color={color!r}, expected (r, g, b, a)"
-        raise ValueError(message)
+        raise ColorError(message)
     for channel in channels:
         if not isinstance(channel, int) or not 0 <= channel <= _MAX_CHANNEL:
             message = f"color={color!r}: channel {channel!r}, expected an integer from 0 to 255"
-            raise ValueError(message)
+            raise ColorError(message)
     return color
 
 
@@ -49,7 +51,7 @@ class Canvas:
         """A transparent canvas of ``width`` by ``height`` pixels."""
         if width < 1 or height < 1:
             message = f"size={width}x{height}, expected positive integers"
-            raise ValueError(message)
+            raise CanvasError(message)
         self._width: int = width
         self._height: int = height
         self.pixels: NDArray[np.uint8] = np.zeros((height, width, _CHANNELS), dtype=np.uint8)
@@ -57,11 +59,10 @@ class Canvas:
     @staticmethod
     def from_pixels(pixels: NDArray[np.uint8]) -> Canvas:
         """A canvas holding a copy of ``pixels`` (rows, columns, RGBA)."""
-        # numpy types a shape as tuple[Any, ...]; its sides are ints.
-        shape = cast("tuple[int, ...]", pixels.shape)
-        if len(shape) != 3 or shape[2] != _CHANNELS:  # noqa: PLR2004 - rows, columns, channels
+        shape = cast("tuple[int, ...]", pixels.shape)  # motivo: numpy says tuple[Any, ...]
+        if len(shape) != 3 or shape[2] != _CHANNELS:  # noqa: PLR2004  # motivo: rows, columns, channels
             message = f"pixels with shape {shape}, expected (height, width, 4)"
-            raise ValueError(message)
+            raise CanvasError(message)
         canvas = Canvas(shape[1], shape[0])
         canvas.pixels[...] = pixels
         return canvas
@@ -111,7 +112,7 @@ class Canvas:
         """Copy with every pixel repeated ``factor`` times on each axis (nearest neighbor)."""
         if factor < 1:
             message = f"factor={factor!r}, expected an integer >= 1"
-            raise ValueError(message)
+            raise SettingError(message)
         return Canvas.from_pixels(self.pixels.repeat(factor, axis=0).repeat(factor, axis=1))
 
     def copy(self) -> Canvas:

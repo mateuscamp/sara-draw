@@ -22,17 +22,20 @@ SOURCE_FOLDERS = (PACKAGE_DIR, ROOT / "tests", ROOT / "examples", ROOT / "docs" 
 # ADR-0001: the layers each layer may import. Modules right under ai_draw/ (cli.py,
 # __init__.py) stitch the layers together and may import any of them.
 LAYER_IMPORTS: dict[str, frozenset[str]] = {
-    "geometry": frozenset(),
-    "grid": frozenset(),
-    "pixel": frozenset({"geometry", "grid"}),
-    "smooth": frozenset({"geometry", "grid"}),
-    "io": frozenset({"grid"}),
+    # ADR-0005: the error family sits under every layer and imports none.
+    "errors": frozenset(),
+    "geometry": frozenset({"errors"}),
+    "grid": frozenset({"errors"}),
+    "pixel": frozenset({"errors", "geometry", "grid"}),
+    "smooth": frozenset({"errors", "geometry", "grid"}),
+    "io": frozenset({"errors", "grid"}),
 }
 TOP_LEVEL = ""
 
 # ADR-0002: third-party packages per layer. Pillow lives only in io/. Test-only packages
 # (fontTools, freetype, skimage, pytest) are in no set, so src/ can never import them.
 THIRD_PARTY: dict[str, frozenset[str]] = {
+    "errors": frozenset(),
     "geometry": frozenset(),
     "grid": frozenset({"numpy"}),
     "pixel": frozenset({"numpy"}),
@@ -175,7 +178,7 @@ def spdx_violations(paths: list[Path]) -> list[str]:
 
 def license_problem(pyproject: Path) -> str | None:
     config: dict[str, object] = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    project = cast("dict[str, object]", config.get("project", {}))
+    project = cast("dict[str, object]", config.get("project", {}))  # motivo: tomllib gives Any
     declared = project.get("license")
     if declared == "GPL-3.0-only":
         return None

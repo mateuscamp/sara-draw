@@ -134,7 +134,7 @@ def even_out_steps(cells: list[Cell], *, closed: bool) -> list[Cell]:
     """
     steps = _steps(cells, closed=closed)
     diagonal_at = [i for i, step in enumerate(steps) if _is_diagonal(step)]
-    if len(cells) < 3 or not diagonal_at:  # noqa: PLR2004 - a line needs three cells to bend
+    if len(cells) < 3 or not diagonal_at:  # noqa: PLR2004  # motivo: a line needs three cells to bend
         return list(cells)
     shift = (diagonal_at[-1] + 1) % len(steps) if closed else 0
     runs, diagonals = _split(steps[shift:] + steps[:shift])

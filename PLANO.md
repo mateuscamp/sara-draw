@@ -105,11 +105,12 @@ Importação permitida (ADR-0001, teste em `tests/architecture/`):
 
 | Camada | Importa do pacote | Terceiros |
 |---|---|---|
-| `geometry` | nada | nenhum |
-| `grid` | nada | numpy |
-| `pixel` | geometry, grid | numpy |
-| `smooth` | geometry, grid | numpy |
-| `io` | grid | numpy, Pillow |
+| `errors` | nada | nenhum |
+| `geometry` | errors | nenhum |
+| `grid` | errors | numpy |
+| `pixel` | errors, geometry, grid | numpy |
+| `smooth` | errors, geometry, grid | numpy |
+| `io` | errors, grid | numpy, Pillow |
 | `cli.py` | todas | — |
 
 `pixel` e `smooth` não se importam: o que for comum desce para `geometry` ou `grid`.
@@ -177,6 +178,7 @@ dois lados, nunca contra o raster cru.
 - `docs/adr/0002-numpy-e-pillow.md` · Aceito
 - `docs/adr/0003-licenca-gpl-3.md` · Aceito
 - `docs/adr/0004-porte-dos-repositorios-privados.md` · Proposto
+- `docs/adr/0005-trilhos-python.md` · Aceito
 
 ## Inspirações (pesquisa de 31/10)
 
@@ -295,6 +297,14 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   ADR-0002. Medido: o raster cru repete o placar de partida da bancada; o `skimage.draw` sai
   limpo nas retas e deixa 8 cantos em L e 40 de wobble nos círculos e a ponta da estrela solta.
   A wheel instala num Python 3.11 limpo e o `ai-draw` roda.
+
+- Auditoria python-on-rails (01/11, ADR-0005): portão único `make check` (`scripts/portao.sh`)
+  no agente, no hook Stop (`.claude/settings.json`) e no CI (`.github/workflows/check.yml`);
+  apertos que já passavam (warning vira erro, `failOnWarnings`, só `ignore` com regra,
+  complexidade 8, `.python-version`); supressões e `cast` com `# motivo:`; família de exceções
+  `DrawingError(ValueError)` na camada nova `errors`; os desvios das fases 0 a 8 declarados no
+  ADR-0005; Hypothesis adiado para depois da fase 9. O grep de supressão da skill não pegava
+  diretiva de arquivo do pyright; o portão daqui pega.
 
 ## Próximo passo
 

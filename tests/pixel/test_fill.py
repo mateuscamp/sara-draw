@@ -54,8 +54,9 @@ def test_empty_path_has_no_spans() -> None:
 
 
 def test_unknown_rule_is_an_error() -> None:
+    bad_rule = cast("FillRule", cast("object", "winding"))  # motivo: the bad rule is the test
     with pytest.raises(ValueError, match="nonzero"):
-        _ = spans(rect(0, 0, 1, 1).contours(), cast("FillRule", cast("object", "winding")), 4)
+        _ = spans(rect(0, 0, 1, 1).contours(), bad_rule, 4)
 
 
 def test_evenodd_star_keeps_its_tips_joined() -> None:

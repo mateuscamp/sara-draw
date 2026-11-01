@@ -11,6 +11,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import ColorError, SettingError
 from ai_draw.grid.canvas import check_color
 
 if TYPE_CHECKING:
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from ai_draw.grid.canvas import Canvas, Color
 
 
-def speckle(  # noqa: PLR0913 - an area and three settings
+def speckle(  # noqa: PLR0913  # motivo: an area and three settings
     canvas: Canvas,
     x: int,
     y: int,
@@ -36,12 +37,12 @@ def speckle(  # noqa: PLR0913 - an area and three settings
     """
     if not 0 <= chance <= 1:
         message = f"chance={chance!r}, expected a probability from 0 to 1"
-        raise ValueError(message)
+        raise SettingError(message)
     if not colors:
         message = "colors=[], expected at least one color"
-        raise ValueError(message)
+        raise ColorError(message)
     palette = [check_color(color) for color in colors]
-    rng = random.Random(seed)  # noqa: S311 - texture, not security
+    rng = random.Random(seed)  # noqa: S311  # motivo: texture, not security
     for row in range(y, y + height):
         for column in range(x, x + width):
             if rng.random() < chance:

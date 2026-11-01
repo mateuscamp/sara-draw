@@ -68,7 +68,7 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _say(message: str) -> None:
-    print(f"ai-draw: {message}", file=sys.stderr)  # noqa: T201 - CLI output for a human
+    print(f"ai-draw: {message}", file=sys.stderr)  # noqa: T201  # motivo: CLI output for a human
 
 
 def _render(arguments: _Arguments) -> int:
@@ -102,10 +102,10 @@ def _palette(arguments: _Arguments) -> int:
         return EXIT_SCENE_ERROR
     used = collect({arguments.scene.stem: canvas})
     for use in used:
-        print(f"{to_hex(use.color)}  {use.pixels} px")  # noqa: T201 - the command's output
+        print(f"{to_hex(use.color)}  {use.pixels} px")  # noqa: T201  # motivo: the command's output
     if arguments.near is not None:
         for first, second in near_pairs([use.color for use in used], arguments.near):
-            print(f"near: {to_hex(first)} {to_hex(second)}")  # noqa: T201 - the command's output
+            print(f"near: {to_hex(first)} {to_hex(second)}")  # noqa: T201  # motivo: the command's output
     return 0
 
 
@@ -120,7 +120,7 @@ def _lint(arguments: _Arguments) -> int:
     findings = lint(canvas, line=arguments.line, width=arguments.width, near=near)
     for finding in findings:
         detail = f" ({finding.detail})" if finding.detail else ""
-        print(f"{finding.check}: {finding.count}{detail}")  # noqa: T201 - the command's output
+        print(f"{finding.check}: {finding.count}{detail}")  # noqa: T201  # motivo: the command's output
     return 1 if any(finding.count for finding in findings) else 0
 
 

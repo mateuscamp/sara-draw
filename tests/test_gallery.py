@@ -39,5 +39,5 @@ def test_the_readme_example_runs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert blocks, "the README shows a Python example"
     monkeypatch.chdir(tmp_path)
     for block in blocks:
-        exec(compile(block, "README.md", "exec"), {})  # noqa: S102 - the README's own example
+        exec(compile(block, "README.md", "exec"), {})  # noqa: S102  # motivo: the README's own example
     assert list(tmp_path.glob("*.png")), "the example writes a picture"

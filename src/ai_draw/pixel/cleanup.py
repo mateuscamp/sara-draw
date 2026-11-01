@@ -50,7 +50,7 @@ def bridge_gaps(cells: AbstractSet[Cell], outline: Iterable[Cell]) -> set[Cell]:
     apart there.
     """
     labels = component_labels(frozenset(cells))
-    if len(set(labels.values())) < 2:  # noqa: PLR2004 - one piece needs no bridge
+    if len(set(labels.values())) < 2:  # noqa: PLR2004  # motivo: one piece needs no bridge
         return set(cells)
     candidates = {cell: _touching(cell, labels) for cell in set(outline) - set(cells)}
     single = {cell for cell, pieces in candidates.items() if len(pieces) > 1}

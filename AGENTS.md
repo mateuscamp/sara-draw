@@ -7,8 +7,8 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 
 - Setup: `uv sync` — idempotente, sem rede depois da primeira vez.
 - Testes: `uv run pytest` — headless, sem rede, suíte inteira < 10 s.
-- Portão (rodar antes de declarar qualquer tarefa concluída):
-  `uv run ruff format --check && uv run ruff check && uv run basedpyright && uv run pytest`
+- Portão: `make check` (`scripts/portao.sh`). Rode antes de dizer "pronto" e mostre a saída;
+  o hook Stop roda o mesmo com `--rapido`, e o CI o completo (ADR-0005).
 - Ver uma cena (a partir da fase 1): `uv run ai-draw render <cena.py> --scale 10`; ao vivo
   (fase 2): `uv run ai-draw watch <cena.py>`; cores: `uv run ai-draw palette <cena.py> --near 10`.
 - Exemplos em `examples/pixel/` (com `PALETTE` fechada: cor fora reprova) e `examples/smooth/`.
@@ -21,8 +21,9 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 
 ## Fronteiras (ADR-0001, ADR-0002)
 
-- `geometry/` não importa nada do pacote nem de terceiros.
-- `grid/` não importa nada do pacote; terceiros: só numpy.
+- `errors/` (a família `DrawingError`) não importa nada; toda camada pode importá-la.
+- `geometry/` só importa `errors/`; nada de terceiros.
+- `grid/` só importa `errors/`; terceiros: só numpy.
 - `pixel/` e `smooth/` importam `geometry/` e `grid/`; nunca um ao outro. Comum desce de camada.
 - `io/` importa `grid/`; é o único que toca disco e o único que importa `PIL`.
 - Proibido: `ImageDraw`, `Image.resize`. Ampliar é `Canvas.enlarged` (vizinho mais próximo).
@@ -41,10 +42,21 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 - Não copie asset, paleta nem constante dos projetos privados de origem; exemplos são novos.
 - `notes/` é local e fica fora do git. O hook `pre-commit` reprova termo privado; nunca use `--no-verify`.
 
+## Python (ADR-0005)
+
+- Proibido mexer em `[tool.ruff]`, `[tool.basedpyright]`, `[tool.pytest]`, em `scripts/portao.sh`
+  ou acrescentar ignore/exclude. Regra parece errada? Diga no relatório e pare: mudança é do Mateus, com ADR.
+- Supressão só com regra e motivo na mesma linha: `# noqa: S603  # motivo: ...`,
+  `# pyright: ignore[reportX]  # motivo: ...`; diretiva de arquivo com `# motivo:` na linha de cima.
+  `cast` também é supressão: motivo na mesma linha.
+- Erro de entrada: levante da família `ai_draw.errors` (`GeometryError`, `ColorError`,
+  `CanvasError`, `SettingError`), com o valor recebido e o esperado. Proibido `except Exception`.
+- `Any` de biblioteca (json, tomllib, numpy) para na borda.
+- Dependência nova: `uv add`, com o que ela faz que a stdlib não faz e quem mantém, e ADR.
+
 ## Tipos e estilo
 
 - basedpyright em `typeCheckingMode = "all"`, zero erro e zero aviso; Ruff com regras amplas.
-- `# type: ignore` e `# noqa` só com o código da regra e o motivo na mesma linha.
 - Tipos explícitos em toda função pública; sem `Any`. Arrays com `NDArray[np.uint8]` e afins.
 - Funções de 4 a 20 linhas (teto 40); arquivo ≤ 400 linhas.
 - Código em inglês: nomes, docstrings, comentários e mensagens de erro. Documentos
@@ -97,6 +109,7 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 
 ```
 src/ai_draw/
+  errors/     DrawingError e família    (não importa nada)
   geometry/   path, transform           (Python puro)
   grid/       canvas, arrays, noise, rows, outline, compare, palette   (numpy)
   pixel/      fill, line, steps, stroke, rounded, cleanup, defects

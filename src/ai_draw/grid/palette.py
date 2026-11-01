@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import ColorError
 from ai_draw.grid.arrays import color_counts, color_mask
 from ai_draw.grid.canvas import CLEAR
 
@@ -36,7 +37,7 @@ def parse_hex(text: str) -> Color:
     match = _HEX.fullmatch(text.strip())
     if match is None:
         message = f"hex={text!r}, expected #rrggbb or #rrggbbaa"
-        raise ValueError(message)
+        raise ColorError(message)
     rgb, alpha = match.group(1), match.group(2)
     r, g, b = (int(rgb[i : i + 2], 16) for i in (0, 2, 4))
     return r, g, b, int(alpha, 16) if alpha else 255
@@ -45,7 +46,7 @@ def parse_hex(text: str) -> Color:
 def to_hex(color: Color) -> str:
     """Write ``#rrggbb``, with ``aa`` appended only when the color is not opaque."""
     r, g, b, a = color
-    return f"#{r:02x}{g:02x}{b:02x}" + ("" if a == 255 else f"{a:02x}")  # noqa: PLR2004 - opaque
+    return f"#{r:02x}{g:02x}{b:02x}" + ("" if a == 255 else f"{a:02x}")  # noqa: PLR2004  # motivo: opaque
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +72,7 @@ class Family:
             code, _, role = entry.strip().partition(" ")
             if not role.strip():
                 message = f"family {name!r}: entry {entry!r}, expected 'rrggbb role'"
-                raise ValueError(message)
+                raise ColorError(message)
             swatches.append(Swatch(parse_hex(code), role.strip()))
         return Family(name, tuple(swatches))
 
@@ -97,7 +98,7 @@ class Palette:
                 if swatch.color in owner:
                     names = f"{owner[swatch.color]!r} and {family.name!r}"
                     message = f"color {to_hex(swatch.color)} in {names}, expected one family"
-                    raise ValueError(message)
+                    raise ColorError(message)
                 owner[swatch.color] = family.name
 
     @property
@@ -120,7 +121,7 @@ class Palette:
         """The palette color closest to ``color`` to the eye; ties go to the first listed."""
         if not self.colors:
             message = "palette has no colors, expected at least one family with a swatch"
-            raise ValueError(message)
+            raise ColorError(message)
         return min(self.colors, key=lambda candidate: _redmean(candidate, color))
 
     def quantize(self, canvas: Canvas) -> Canvas:
@@ -196,7 +197,7 @@ def merge(palette: Palette, used: Sequence[ColorUse], tolerance: int) -> dict[Co
         family = palette.family_of(use.color)
         if family is None:
             message = f"color {to_hex(use.color)} in {', '.join(use.pieces)} has no family"
-            raise ValueError(message)
+            raise ColorError(message)
         family_groups = groups.setdefault(family.name, [])
         group = _group_for(family_groups, use, tolerance)
         if group is None:

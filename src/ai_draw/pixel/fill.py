@@ -15,6 +15,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, NamedTuple, get_args
 
+from ai_draw.errors import SettingError
 from ai_draw.geometry.path import FillRule
 from ai_draw.pixel.cleanup import bridge_gaps
 from ai_draw.pixel.line import line_cells
@@ -108,7 +109,7 @@ def spans(contours: Sequence[Contour], rule: FillRule, height: int) -> list[Span
     """
     if rule not in get_args(FillRule):
         message = f"rule={rule!r}, expected 'nonzero' or 'evenodd'"
-        raise ValueError(message)
+        raise SettingError(message)
     low, high = _y_bounds(contours)
     if low > high:
         return []
@@ -159,7 +160,7 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
     found = spans(path.contours(), rule, canvas.height)
     for span in found:
         canvas.span(span.x, span.y, span.length, color)
-    if _pieces(found) < 2:  # noqa: PLR2004 - one piece needs no bridge
+    if _pieces(found) < 2:  # noqa: PLR2004  # motivo: one piece needs no bridge
         return
     filled = {(x, span.y) for span in found for x in range(span.x, span.x + span.length)}
     for x, y in sorted(bridge_gaps(filled, line_cells(path)) - filled):

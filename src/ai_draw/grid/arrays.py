@@ -2,6 +2,7 @@
 # numpy 2.5's stubs type comparisons, reductions and np.pad on NDArray as Any or partially
 # unknown, which the strict checker rejects. The array arithmetic lives here, behind small
 # functions with exact return types, so every other module stays fully checked.
+# motivo: numpy 2.5 types array arithmetic as Any (above); the exact types are in the returns
 # pyright: reportAny=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
 # pyright: reportUnknownVariableType=false
 """Pixel masks: the only module of the package that does array arithmetic.

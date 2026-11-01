@@ -46,6 +46,11 @@ depois invalida todo gabarito de teste.
 **Aceito conscientemente:** revisitar se a saída suave ganhar usuários próprios que não usam
 a pixel.
 
+## Emenda (2026-11-01, ADR-0005)
+
+A camada `errors` (a família `DrawingError`) fica abaixo de todas: não importa nada e todas a
+podem importar.
+
 ## Governança
 
 | O que verifica | Mecanismo | Onde roda | Falha quando |

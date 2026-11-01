@@ -18,6 +18,8 @@ import itertools
 from collections import Counter
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import SettingError
+
 if TYPE_CHECKING:
     from ai_draw.grid.canvas import Canvas, Color
 
@@ -206,7 +208,7 @@ def thickness_defects(cells: Cells, width: int) -> int:
     """
     if width < 1:
         message = f"width={width!r}, expected an integer >= 1"
-        raise ValueError(message)
+        raise SettingError(message)
     rows, columns = _run_lengths(cells, by_rows=True), _run_lengths(cells, by_rows=False)
     thin = 0
     for cell in cells:
@@ -237,7 +239,7 @@ def _mirror_offset(axis: float, name: str) -> int:
     doubled = axis * 2
     if doubled != int(doubled):
         message = f"{name}={axis!r}, expected a whole or half number (a pixel edge or center)"
-        raise ValueError(message)
+        raise SettingError(message)
     return int(doubled) - 1
 
 

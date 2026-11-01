@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import CanvasError
 from ai_draw.grid.canvas import Canvas
 
 if TYPE_CHECKING:
@@ -59,19 +60,19 @@ def from_rows(rows: Sequence[str], legend: Mapping[str, Color]) -> Canvas:
 def _check_map(rows: Sequence[str], legend: Mapping[str, Color]) -> None:
     if not rows:
         message = "no rows, expected at least one row of characters"
-        raise ValueError(message)
+        raise CanvasError(message)
     if TRANSPARENT_CHAR in legend:
         message = f"legend uses {TRANSPARENT_CHAR!r}, which always means transparent"
-        raise ValueError(message)
+        raise CanvasError(message)
     width = len(rows[0])
     for y, row in enumerate(rows):
         if len(row) != width:
             message = f"row {y} has {len(row)} columns, expected {width}: {row!r}"
-            raise ValueError(message)
+            raise CanvasError(message)
         unknown = sorted(set(row) - set(legend) - {TRANSPARENT_CHAR})
         if unknown:
             message = f"char {unknown[0]!r} in row {y} has no color in the legend"
-            raise ValueError(message)
+            raise CanvasError(message)
 
 
 def _char(color: Color | None, chars: Mapping[Color, str]) -> str:

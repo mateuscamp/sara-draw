@@ -45,7 +45,7 @@ class PollResult(NamedTuple):
 
 def open_imv(output: Path) -> Viewer:
     """Open imv on ``output``; imv reloads the file by itself when it changes."""
-    return subprocess.Popen(["imv", str(output)])  # noqa: S603, S607 - fixed command, the user's viewer
+    return subprocess.Popen(["imv", str(output)])  # noqa: S603, S607  # motivo: fixed command, the user's viewer
 
 
 def _read(path: Path) -> bytes:
@@ -91,7 +91,7 @@ class LiveSession:
         _forget_siblings(self.scene.resolve().parent)
         try:
             canvas = load_scene(self.scene).enlarged(self._scale)
-        except Exception as error:  # noqa: BLE001 - a broken scene must not end the session
+        except Exception as error:  # noqa: BLE001  # motivo: a broken scene must not end the session
             reason = f"{type(error).__name__}: {error}"
             return PollResult(drew=False, message=f"{reason}; kept the last good picture")
         write_png(canvas, self.output)

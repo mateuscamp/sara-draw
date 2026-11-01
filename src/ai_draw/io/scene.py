@@ -16,6 +16,7 @@ import sys
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+from ai_draw.errors import DrawingError
 from ai_draw.grid.canvas import Canvas
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class SceneError(Exception):
+class SceneError(DrawingError):
     """The scene file does not give a canvas."""
 
 
