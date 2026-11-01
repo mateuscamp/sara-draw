@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 from ai_draw.geometry.path import Contour, Point
 from ai_draw.pixel.fill import spans
+from ai_draw.pixel.line import line
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -76,7 +77,14 @@ def stroke_pieces(contours: Sequence[Contour], width: float) -> list[Contour]:
 
 
 def stroke(canvas: Canvas, path: Path, color: Color, width: float) -> None:
-    """Stroke ``path`` with ``width`` pixels, round caps and round joins."""
+    """Stroke ``path`` with ``width`` pixels.
+
+    One pixel is the pixel-perfect line of ``ai_draw.pixel.line``; wider strokes are still
+    quads and discs, with round caps and joins.
+    """
+    if width == 1:
+        line(canvas, path, color)
+        return
     for piece in stroke_pieces(path.contours(), width):
         for span in spans([piece], "nonzero", canvas.height):
             canvas.span(span.x, span.y, span.length, color)

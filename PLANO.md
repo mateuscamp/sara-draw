@@ -242,7 +242,17 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
 
   Preenchimentos (coração, círculos r 2–16, estrela nonzero) saem limpos e simétricos.
 
+- Fase 4 (31/10): `pixel/line.py` e `pixel/steps.py`; o `stroke` de 1 px passou a ser a
+  linha nova. Cada ponto vira o pixel que o contém (na divisa, o do lado de dentro; na ponta
+  de forma simétrica, os dois), Bresenham inteiro liga os pixels (sempre do menor para o
+  maior, igual nos dois sentidos), o filtro de L tira primeiro o pixel mais longe da curva
+  (decidir pela ordem do caminho girava o círculo) e preserva os vértices de canto, e os
+  degraus fora de ordem trocam com o vizinho, decididos todos juntos a cada passada. Placar:
+  cantos em L 168/84/48 → 0, wobble 80/30 → 0, espessura do losango 16 → 0; nada subiu.
+  Observado montado: círculos grandes (r ≥ 11) leem um pouco octogonais, a passagem do topo
+  plano para os degraus é brusca; nenhuma métrica mede redondeza ainda.
+
 ## Próximo passo
 
-Fase 4: linha de 1 px pixel-perfect (remover o L, degraus regulares, curva simétrica). Meta:
-`l_corners`, `uneven_steps` e `wobble` em 0 nas retas, nos círculos e no losango de 1 px.
+Fase 5: traço de N px por carimbo de pincel ao longo da linha de 1 px, parte fina e limpeza.
+Meta: estrela evenodd em 1 componente; onda de 2 px com `wobble` e espessura em 0.

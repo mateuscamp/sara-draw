@@ -6,6 +6,7 @@ import pytest
 from ai_draw.geometry.path import Path, rect
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
+from ai_draw.pixel.defects import cells_of, l_corners
 from ai_draw.pixel.stroke import disc, stroke, stroke_pieces
 
 INK: Color = (20, 20, 20, 255)
@@ -44,3 +45,10 @@ def test_disc_stays_within_its_radius() -> None:
 def test_stroke_width_must_be_positive(width: float) -> None:
     with pytest.raises(ValueError, match="width"):
         _ = stroke_pieces(rect(0, 0, 1, 1).contours(), width)
+
+
+def test_one_pixel_stroke_is_the_pixel_perfect_line() -> None:
+    canvas = Canvas(9, 5)
+    stroke(canvas, Path().move_to(0.5, 0.5).line_to(8.5, 4.5), INK, 1)
+    assert l_corners(cells_of(canvas)) == 0
+    assert to_rows(canvas, LEGEND)[0] == "##......."

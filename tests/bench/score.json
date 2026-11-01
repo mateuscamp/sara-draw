@@ -7,17 +7,17 @@
   "circle_stroke_1px_r3_to_r16": {
     "asymmetry": 0,
     "extra_components": 0,
-    "l_corners": 168,
+    "l_corners": 0,
     "orphans": 0,
     "thickness": 0,
-    "wobble": 80
+    "wobble": 0
   },
   "diamond_stroke_1px": {
     "asymmetry": 0,
     "extra_components": 0,
-    "l_corners": 84,
+    "l_corners": 0,
     "orphans": 0,
-    "thickness": 16,
+    "thickness": 0,
     "wobble": 0
   },
   "heart_fill": {
@@ -27,11 +27,11 @@
   },
   "lines_1px_1to1_to_1to6": {
     "extra_components": 0,
-    "l_corners": 48,
+    "l_corners": 0,
     "orphans": 0,
     "thickness": 0,
     "uneven_steps": 0,
-    "wobble": 30
+    "wobble": 0
   },
   "star_fill_evenodd": {
     "extra_components": 1,
