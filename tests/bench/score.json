@@ -1,0 +1,51 @@
+{
+  "circle_fill_r2_to_r16": {
+    "asymmetry": 0,
+    "extra_components": 0,
+    "orphans": 0
+  },
+  "circle_stroke_1px_r3_to_r16": {
+    "asymmetry": 0,
+    "extra_components": 0,
+    "l_corners": 168,
+    "orphans": 0,
+    "thickness": 0,
+    "wobble": 80
+  },
+  "diamond_stroke_1px": {
+    "asymmetry": 0,
+    "extra_components": 0,
+    "l_corners": 84,
+    "orphans": 0,
+    "thickness": 16,
+    "wobble": 0
+  },
+  "heart_fill": {
+    "asymmetry": 0,
+    "extra_components": 0,
+    "orphans": 0
+  },
+  "lines_1px_1to1_to_1to6": {
+    "extra_components": 0,
+    "l_corners": 48,
+    "orphans": 0,
+    "thickness": 0,
+    "uneven_steps": 0,
+    "wobble": 30
+  },
+  "star_fill_evenodd": {
+    "extra_components": 1,
+    "orphans": 0
+  },
+  "star_fill_nonzero": {
+    "asymmetry": 0,
+    "extra_components": 0,
+    "orphans": 0
+  },
+  "wave_stroke_2px": {
+    "extra_components": 0,
+    "orphans": 0,
+    "thickness": 0,
+    "wobble": 10
+  }
+}

@@ -48,6 +48,7 @@ ban-relative-imports = "all" # AGENTS.md: imports are absolute
 typeCheckingMode = "all"
 pythonVersion = "3.11"
 include = ["src", "tests", "examples"]
+extraPaths = ["tests/support"]
 # pytest fixtures and test functions are called by name, never imported
 reportUnusedFunction = "none"
 
@@ -55,4 +56,6 @@ reportUnusedFunction = "none"
 # src/ too: the >>> examples in docstrings run as tests, so they cannot rot
 testpaths = ["tests", "src"]
 addopts = ["-q", "--strict-markers", "--import-mode=importlib", "--doctest-modules"]
+# shared test code (architecture rules, bench shapes) lives here, importable by name
+pythonpath = ["tests/support"]
 xfail_strict = true

@@ -226,8 +226,23 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   comparação de array como `Any`; a aritmética de array ficou em `grid/arrays.py`, a única
   dispensa do modo estrito, e o próprio basedpyright reprova a aritmética fora dele.
 
+- Fase 3 (31/10): `pixel/defects.py` com sete detectores (`orphans`, `components`,
+  `l_corners`, `uneven_steps`, `thickness_defects`, `wobble`, `asymmetric_cells`) e a bancada
+  em `tests/support/bench_cases.py`, com o placar em `tests/bench/score.json` (catraca: só
+  desce). O `wobble` nasceu na fase: o critério do pincel (bloco w×w, nenhum (w+1)²) dava 0
+  na onda, cuja largura oscila 3, 2, 3 nas laterais. Placar de partida, só o que não é zero:
+
+  | caso | defeitos |
+  |---|---|
+  | estrela evenodd | 1 componente a mais (ponta solta) |
+  | círculos 1 px, r 3–16 | 168 cantos em L, 80 de wobble |
+  | retas 1 px, 1:1 a 1:6 | 48 cantos em L, 30 de wobble (só as inclinações 1:2, 1:4 e 1:6) |
+  | losango 1 px | 84 cantos em L, 16 de espessura (bolhas nos vértices) |
+  | onda 2 px | 10 de wobble |
+
+  Preenchimentos (coração, círculos r 2–16, estrela nonzero) saem limpos e simétricos.
+
 ## Próximo passo
 
-Fase 3: `pixel/defects.py` (os detectores) e a bancada em `tests/bench/`, com o placar de
-hoje gravado em `score.json`. O `tests/architecture/test_architecture.py` está com 399
-linhas: a próxima regra pede dividi-lo antes.
+Fase 4: linha de 1 px pixel-perfect (remover o L, degraus regulares, curva simétrica). Meta:
+`l_corners`, `uneven_steps` e `wobble` em 0 nas retas, nos círculos e no losango de 1 px.

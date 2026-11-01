@@ -69,8 +69,9 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 
 ## Bancada de defeitos (driver ★)
 
-- `tests/bench/` mede os detectores de `pixel/defects.py` sobre a bancada fixa; o placar
-  fica em `tests/bench/score.json` e só pode descer (catraca).
+- `tests/bench/` mede os detectores de `pixel/defects.py` sobre a bancada fixa de
+  `tests/support/bench_cases.py`; o placar fica em `tests/bench/score.json` e só pode descer
+  (catraca). Todo detector é 0 em pixel art limpa.
 - Melhoria de pixel compara contra a saída atual com o mesmo número de etapas, nunca contra o raster cru.
 - Baixar o placar: rode `uv run pytest tests/bench --update-score` e mostre o antes e o depois no relatório.
 
@@ -96,7 +97,7 @@ src/ai_draw/
   smooth/     coverage, stroke
   io/         png, scene, live          (único com disco e PIL)
   cli.py
-tests/<camada>/ · tests/architecture/ · tests/bench/
+tests/<camada>/ · tests/architecture/ · tests/bench/ · tests/support/ (regras e bancada, importáveis)
 docs/adr/
 ```
 
