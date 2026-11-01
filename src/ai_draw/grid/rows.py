@@ -15,10 +15,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping
+from ai_draw.grid.canvas import Canvas
 
-    from ai_draw.grid.canvas import Canvas, Color
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from ai_draw.grid.canvas import Color
 
 TRANSPARENT_CHAR = "."
 UNKNOWN_CHAR = "?"
@@ -35,6 +37,41 @@ def to_rows(canvas: Canvas, legend: Mapping[str, Color]) -> list[str]:
         "".join(_char(canvas.color_at(x, y), chars) for x in range(canvas.width))
         for y in range(canvas.height)
     ]
+
+
+def from_rows(rows: Sequence[str], legend: Mapping[str, Color]) -> Canvas:
+    """Draw a sprite from a character map: each char is a legend color, ``.`` is transparent.
+
+    Every pixel is a readable decision, and a change shows up in the diff. The tool for the
+    small detail, where no rule replaces choosing pixel by pixel.
+
+    >>> to_rows(from_rows([".r.", "rrr"], {"r": (200, 0, 0, 255)}), {"r": (200, 0, 0, 255)})
+    ['.r.', 'rrr']
+    """
+    _check_map(rows, legend)
+    canvas = Canvas(len(rows[0]), len(rows))
+    for y, row in enumerate(rows):
+        for x in (x for x, char in enumerate(row) if char != TRANSPARENT_CHAR):
+            canvas.paint(x, y, legend[row[x]])
+    return canvas
+
+
+def _check_map(rows: Sequence[str], legend: Mapping[str, Color]) -> None:
+    if not rows:
+        message = "no rows, expected at least one row of characters"
+        raise ValueError(message)
+    if TRANSPARENT_CHAR in legend:
+        message = f"legend uses {TRANSPARENT_CHAR!r}, which always means transparent"
+        raise ValueError(message)
+    width = len(rows[0])
+    for y, row in enumerate(rows):
+        if len(row) != width:
+            message = f"row {y} has {len(row)} columns, expected {width}: {row!r}"
+            raise ValueError(message)
+        unknown = sorted(set(row) - set(legend) - {TRANSPARENT_CHAR})
+        if unknown:
+            message = f"char {unknown[0]!r} in row {y} has no color in the legend"
+            raise ValueError(message)
 
 
 def _char(color: Color | None, chars: Mapping[Color, str]) -> str:

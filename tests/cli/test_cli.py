@@ -56,3 +56,18 @@ def test_scene_without_a_canvas_is_reported(
 ) -> None:
     assert main(["render", str(write_scene(tmp_path, source))]) == 2
     assert message in capsys.readouterr().err
+
+
+def test_watch_once_draws_without_opening_a_viewer(tmp_path: Path) -> None:
+    scene = write_scene(tmp_path)
+    assert main(["watch", str(scene), "--once", "--no-viewer", "--scale", "2"]) == 0
+    assert (tmp_path / "scene.png").exists()
+    assert read_png(tmp_path / "scene.png").width == 32
+
+
+def test_watch_once_reports_a_broken_scene(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scene = write_scene(tmp_path, "x = 1\n")
+    assert main(["watch", str(scene), "--once", "--no-viewer"]) == 2
+    assert "draw()" in capsys.readouterr().err

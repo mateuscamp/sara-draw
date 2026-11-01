@@ -75,8 +75,10 @@ src/ai_draw/
                      rect, rounded_rect, join, flatten
     transform.py     afim 2D (a matrix do SVG); seno/cosseno exatos em 90°
   grid/        a grade de pixels (numpy); porte de um kit de grade anterior, só o núcleo
-    canvas.py        Canvas (ndarray H×W×4 uint8), get/set, rect, speckle com semente, enlarge
-    rows.py          from_rows: sprite por mapa de caracteres + legenda
+    canvas.py        Canvas (ndarray H×W×4 uint8), paint, span, rect, copy, enlarged
+    arrays.py        máscaras numpy: o único módulo com aritmética de array (tipagem)
+    noise.py         speckle com semente obrigatória
+    rows.py          from_rows / to_rows: sprite por mapa de caracteres + legenda
     outline.py       outline (1 px calculado), outlined (pelas 8 vizinhas)
     palette.py       levantar cores, pares quase iguais, famílias, fundir, quantizar
     compare.py       diff pixel a pixel, recolor
@@ -92,7 +94,8 @@ src/ai_draw/
     stroke.py        traço por offset do caminho, junta e ponta
   io/          único lugar que toca disco e Pillow
     png.py           ler e gravar PNG
-    live.py          vigia o script, redesenha, o imv recarrega
+    scene.py         roda a cena (draw() -> Canvas), com a pasta dela importável
+    live.py          vigia a cena, redesenha, o imv recarrega
   cli.py       ai-draw render | watch | diff | palette
 tests/<camada>/test_<modulo>.py · tests/architecture/ · tests/bench/
 docs/adr/
@@ -217,6 +220,14 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   diferente em 64×64 (conferência local, fora do git). A saída reproduz os defeitos de
   partida: pontas da estrela soltas, onda de 2 px com espessura irregular.
 
+- Fase 2 (31/10): `from_rows`, `outline` e `outlined`, `diff` e `recolor`, `speckle` com
+  semente, `ai-draw watch` (imv, `--also`, `--once`, `--no-viewer`) e o primeiro exemplo
+  novo, `examples/potion.py` (mapa de caracteres + contorno calculado). O numpy 2.5 tipa
+  comparação de array como `Any`; a aritmética de array ficou em `grid/arrays.py`, a única
+  dispensa do modo estrito, e o próprio basedpyright reprova a aritmética fora dele.
+
 ## Próximo passo
 
-Fase 2: `grid/rows.from_rows`, `grid/outline`, `grid/compare` e `ai-draw watch` com o `imv`.
+Fase 3: `pixel/defects.py` (os detectores) e a bancada em `tests/bench/`, com o placar de
+hoje gravado em `score.json`. O `tests/architecture/test_architecture.py` está com 399
+linhas: a próxima regra pede dividi-lo antes.

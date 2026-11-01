@@ -114,6 +114,10 @@ class Canvas:
             raise ValueError(message)
         return Canvas.from_pixels(self.pixels.repeat(factor, axis=0).repeat(factor, axis=1))
 
+    def copy(self) -> Canvas:
+        """An independent canvas with the same pixels."""
+        return Canvas.from_pixels(self.pixels)
+
     def same_pixels(self, other: Canvas) -> bool:
         """Same size and exactly the same pixels."""
         same_size = (self.width, self.height) == (other.width, other.height)

@@ -85,3 +85,11 @@ def test_same_pixels_compares_size_and_every_channel() -> None:
     second.paint(1, 0, RED)
     assert not first.same_pixels(second)
     assert not first.same_pixels(Canvas(1, 2))
+
+
+def test_copy_is_independent_of_the_original() -> None:
+    canvas = Canvas(1, 1)
+    copy = canvas.copy()
+    copy.paint(0, 0, RED)
+    assert canvas.color_at(0, 0) == CLEAR
+    assert copy.color_at(0, 0) == RED

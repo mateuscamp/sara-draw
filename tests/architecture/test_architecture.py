@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "ai_draw"
 PACKAGE_DIR = ROOT / "src" / PACKAGE
 SPDX = "# SPDX-License-Identifier: GPL-3.0-only"
+# Every Python file the repository ships: the package, its tests and the examples.
+SOURCE_FOLDERS = (PACKAGE_DIR, ROOT / "tests", ROOT / "examples")
 
 # ADR-0001: the layers each layer may import. Modules right under ai_draw/ (cli.py,
 # __init__.py) stitch the layers together and may import any of them.
@@ -245,9 +247,6 @@ def attribute_violations(paths: list[Path]) -> list[str]:
     ]
 
 
-# --- end of rules ----------------------------------------------------------------------
-
-
 def python_files(directory: Path) -> list[Path]:
     return sorted(directory.rglob("*.py"))
 
@@ -262,7 +261,7 @@ def make_package(tmp_path: Path, files: dict[str, str]) -> Path:
 
 
 def source_paths() -> list[Path]:
-    return python_files(PACKAGE_DIR) + python_files(ROOT / "tests")
+    return [path for folder in SOURCE_FOLDERS for path in python_files(folder)]
 
 
 # --- layers (ADR-0001, ADR-0002) -------------------------------------------------------

@@ -10,7 +10,7 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 - Portão (rodar antes de declarar qualquer tarefa concluída):
   `uv run ruff format --check && uv run ruff check && uv run basedpyright && uv run pytest`
 - Ver uma cena (a partir da fase 1): `uv run ai-draw render <cena.py> --scale 10`; ao vivo
-  (fase 2): `uv run ai-draw watch <cena.py>`.
+  (fase 2): `uv run ai-draw watch <cena.py>`. Exemplos públicos em `examples/`, cada um testado.
 - Fitness functions: `tests/architecture/test_architecture.py`. Regra nova nasce com o teste
   que a mostra pegando uma violação plantada, visto falhar antes.
 
@@ -20,8 +20,10 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 - `grid/` não importa nada do pacote; terceiros: só numpy.
 - `pixel/` e `smooth/` importam `geometry/` e `grid/`; nunca um ao outro. Comum desce de camada.
 - `io/` importa `grid/`; é o único que toca disco e o único que importa `PIL`.
-- Proibido: `ImageDraw`, `Image.resize`. Ampliar é `grid.canvas.enlarge` (vizinho mais próximo).
+- Proibido: `ImageDraw`, `Image.resize`. Ampliar é `Canvas.enlarged` (vizinho mais próximo).
 - Canvas é `ndarray` uint8 (altura, largura, 4), RGBA, dono `grid/canvas.py`.
+- Aritmética de array (comparar, reduzir, `np.pad`) só em `grid/arrays.py`, atrás de função
+  com tipo exato: é o único arquivo dispensado do modo estrito.
 - Pixel (x, y) amostrado em (x + 0,5, y + 0,5); intervalo semiaberto em y; y para baixo.
 - Saída pixel: alfa só 0 ou 255.
 - Import sempre absoluto (`from ai_draw.grid import canvas`); relativo reprova.
@@ -89,10 +91,10 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 ```
 src/ai_draw/
   geometry/   path, transform           (Python puro)
-  grid/       canvas, rows, outline, palette, compare   (numpy)
+  grid/       canvas, arrays, noise, rows, outline, compare, palette   (numpy)
   pixel/      fill, line, stroke, snap, cleanup, defects
   smooth/     coverage, stroke
-  io/         png, live                 (único com disco e PIL)
+  io/         png, scene, live          (único com disco e PIL)
   cli.py
 tests/<camada>/ · tests/architecture/ · tests/bench/
 docs/adr/
