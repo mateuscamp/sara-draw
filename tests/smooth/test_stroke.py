@@ -82,3 +82,10 @@ def test_stroke_width_must_be_positive(width: float) -> None:
 def test_a_width_that_is_not_finite_is_refused(width: float) -> None:
     with pytest.raises(SettingError, match="width"):
         _ = stroke_outline(Path().move_to(1, 1).line_to(8, 1), width)
+
+
+def test_a_lone_point_is_a_whole_round_dot() -> None:
+    # Regression (audit B1, 02/11): the dot used its own center as a vertex and lost a slice.
+    rows = coverage(stroke_outline(Path().move_to(5, 5), 2), 10, 10)
+    assert area(rows) == pytest.approx(math.pi, rel=0.005)
+    assert rows[4][4] == pytest.approx(rows[4][5], abs=1 / 255)

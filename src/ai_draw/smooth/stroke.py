@@ -117,7 +117,8 @@ def _join(
 def _contour_outline(contour: Contour, half: float) -> list[list[Point]]:
     points = _distinct(contour)
     if len(points) < 2:  # noqa: PLR2004  # motivo: a segment needs two points
-        return [[point, *_arc(point, half, 0.0, 2 * math.pi)] for point in points]
+        # The arc leaves out its ends, so the dot starts on the circle (audit B1).
+        return [[(x + half, y), *_arc((x, y), half, 0.0, 2 * math.pi)] for x, y in points]
     ends = [*points[1:], points[0]] if contour.closed else points[1:]
     normals = [_normal(start, end) for start, end in zip(points, ends, strict=False)]
     # The pushed-out side (+normal) is outside a turn of negative sign, the other of positive.
