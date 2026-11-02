@@ -174,3 +174,12 @@ def test_large_circles_are_mirror_images(radius: int, center: float) -> None:
     # same middle tie as the ellipses.
     cells = frozenset(line_cells(ellipse(center, center, radius)))
     assert asymmetric_cells(cells, mirror_x=center, mirror_y=center) == 0
+
+
+@pytest.mark.parametrize("radius", range(17, 61))
+def test_larger_circles_have_steps_that_only_grow_or_shrink(radius: int) -> None:
+    # Regression (02/11): from radius 19, most circles had a step out of its run, as in
+    # 2, 2, 1, 1, 2, 1, 1, which the wobble detector counts.
+    for center in (radius + 3, radius + 3.5):
+        cells = frozenset(line_cells(ellipse(center, center, radius)))
+        assert wobble(cells, 1) == 0, f"center {center}"

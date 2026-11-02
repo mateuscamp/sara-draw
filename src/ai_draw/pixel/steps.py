@@ -4,7 +4,9 @@
 A line is read as runs (straight stretches of cells) separated by diagonal steps. Along a
 quarter circle the runs go from long and flat to long and steep without turning back; a run
 out of that order is the jaggy a pixel artist fixes by hand. Swapping two neighboring runs
-between equal diagonals keeps both ends of the stretch in place and the line connected.
+between equal diagonals keeps both ends of the stretch in place and the line connected. A
+block of runs of three lengths or more is a curve and is sorted at once; a straight line has
+two lengths at most, and their rhythm stays.
 
     >>> jagged = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 1), (5, 2), (6, 2), (7, 3)]
     >>> even_out_steps(jagged, closed=False)[5]
@@ -13,8 +15,15 @@ between equal diagonals keeps both ends of the stretch in place and the line con
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Set as AbstractSet
+
 Cell = tuple[int, int]
 Step = tuple[int, int]
+
+_NO_CELLS: frozenset[Cell] = frozenset()
 
 
 def _steps(cells: list[Cell], *, closed: bool) -> list[Step]:
@@ -57,22 +66,22 @@ class _Stretch:
         self.diagonals: list[Step] = diagonals
         self.closed: bool = closed
 
-    def _diagonal_before(self, index: int) -> Step | None:
+    def diagonal_before(self, index: int) -> Step | None:
         if index == 0:
             return self.diagonals[-1] if self.closed else None
         return self.diagonals[index - 1]
 
-    def _fits(self, run: list[Step], diagonal: Step) -> bool:
+    def fits(self, run: list[Step], diagonal: Step) -> bool:
         return all(step in {(diagonal[0], 0), (0, diagonal[1])} for step in run)
 
     def swappable(self, first: int, second: int) -> bool:
         """Two neighbors that lie between three equal diagonals, both plain runs."""
-        before, between = self._diagonal_before(first), self.diagonals[first]
+        before, between = self.diagonal_before(first), self.diagonals[first]
         after = self.diagonals[second] if second < len(self.diagonals) else None
         if before is None or after is None or not before == between == after:
             return False
         return all(
-            _slope(self.runs[i]) is not None and self._fits(self.runs[i], between)
+            _slope(self.runs[i]) is not None and self.fits(self.runs[i], between)
             for i in (first, second)
         )
 
@@ -142,6 +151,63 @@ def _settle(stretch: _Stretch) -> None:
         disorder = after
 
 
+def _curve_blocks(stretch: _Stretch, held: list[bool]) -> list[list[int]]:
+    """The runs between equal diagonals, in blocks broken at every turn, kept corner or held run."""
+    blocks: list[list[int]] = [[]]
+    for index, run in enumerate(stretch.runs):
+        before = stretch.diagonal_before(index)
+        after = stretch.diagonals[index] if index < len(stretch.diagonals) else None
+        if (
+            not held[index]
+            and after is not None
+            and before == after
+            and _slope(run) is not None
+            and stretch.fits(run, after)
+        ):
+            blocks[-1].append(index)
+        elif blocks[-1]:
+            blocks.append([])
+    blocks = [block for block in blocks if block]
+    last = len(stretch.runs) - 1
+    if stretch.closed and len(blocks) > 1 and blocks[0][0] == 0 and blocks[-1][-1] == last:
+        blocks[0] = blocks.pop() + blocks[0]  # one block across the seam of a closed line
+    return blocks
+
+
+def _sort_curves(stretch: _Stretch, held: list[bool]) -> None:
+    """Order the runs of each curved block from one end's slope to the other's.
+
+    A straight line has runs of at most two lengths, in a rhythm that must stay (2, 3, 2, 3).
+    A block with three or more is a curve, whose runs grow or shrink without turning back; a
+    run out of that order is the jaggy (2, 2, 1, 1, 2, 1, 1). Sorting keeps the block's runs and
+    so both its ends in place. A ``held`` run, on a straight side of the path, never moves.
+    """
+    for block in _curve_blocks(stretch, held):
+        slopes = [_slope(stretch.runs[i]) or 0.0 for i in block]
+        if len(set(slopes)) < 3:  # noqa: PLR2004  # motivo: a straight line has two run lengths
+            continue
+        half = len(block) // 2
+        first, last = sum(slopes[:half]), sum(slopes[-half:])
+        if first == last:
+            continue
+        rising = first < last
+        runs = sorted(
+            (stretch.runs[i] for i in block), key=lambda run: _slope(run) or 0.0, reverse=not rising
+        )
+        for i, run in zip(block, runs, strict=True):
+            stretch.runs[i] = run
+
+
+def _held_runs(cells: list[Cell], steps: list[Step], straight: AbstractSet[Cell]) -> list[bool]:
+    """Per run, whether it touches a cell of ``straight``; ``cells[i]`` starts ``steps[i]``."""
+    held = [False]
+    for cell, step in zip(cells, steps, strict=False):
+        held[-1] = held[-1] or cell in straight
+        if _is_diagonal(step):
+            held.append(False)
+    return held
+
+
 def _rebuild(start: Cell, stretch: _Stretch) -> list[Cell]:
     cells = [start]
     for index, run in enumerate(stretch.runs):
@@ -151,11 +217,15 @@ def _rebuild(start: Cell, stretch: _Stretch) -> list[Cell]:
     return cells
 
 
-def even_out_steps(cells: list[Cell], *, closed: bool) -> list[Cell]:
+def even_out_steps(
+    cells: list[Cell], *, closed: bool, straight: AbstractSet[Cell] = _NO_CELLS
+) -> list[Cell]:
     """Put the runs of a one-pixel line back in order, each between its neighbors' lengths.
 
     A run that is not straight (a corner the line keeps) and the runs at an open line's ends
-    never move. ``closed`` lines are read around the seam.
+    never move. ``closed`` lines are read around the seam. The cells in ``straight`` lie on a
+    straight side of the path: a curve's order never reaches the runs through them, whose
+    rhythm is the side's own (``_sort_curves``).
     """
     steps = _steps(cells, closed=closed)
     diagonal_at = [i for i, step in enumerate(steps) if _is_diagonal(step)]
@@ -164,6 +234,8 @@ def even_out_steps(cells: list[Cell], *, closed: bool) -> list[Cell]:
     shift = (diagonal_at[-1] + 1) % len(steps) if closed else 0
     runs, diagonals = _split(steps[shift:] + steps[:shift])
     stretch = _Stretch(runs[:-1] if closed else runs, diagonals, closed=closed)
+    rotated = cells[shift:] + cells[:shift]
+    _sort_curves(stretch, _held_runs(rotated, steps[shift:] + steps[:shift], straight))
     _settle(stretch)
     rebuilt = _rebuild(cells[shift], stretch)
     if not closed:

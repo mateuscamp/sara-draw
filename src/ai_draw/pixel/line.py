@@ -34,6 +34,9 @@ Cell = tuple[int, int]
 _SNAP_DECIMALS = 9
 # A vertex turning more than this keeps its pixel; flattened curves turn a few degrees.
 _CORNER_DEGREES = 45
+# A segment this many cells long is a straight side, whose steps keep their rhythm; a curve is
+# flattened to about one segment per pixel.
+_STRAIGHT_CELLS = 3
 
 
 def _area(points: Sequence[Point]) -> float:
@@ -324,13 +327,16 @@ def contour_line(contour: Contour) -> list[Cell]:
     # Only a shape with an inside settles its ties there; a line or a flat shape keeps toward 0.
     shape = contour.closed and _area(contour.points) != 0
     side = contour_side(contour) if shape else 0.0
-    joined = [flat[0]]
+    joined, straight = [flat[0]], set[Cell]()
     for cell in [*flat[1:], *flat[:1]] if contour.closed else flat[1:]:
-        joined.extend(_between(joined[-1], cell, _inside(joined[-1], cell, side)))
+        between = _between(joined[-1], cell, _inside(joined[-1], cell, side))
+        if len(between) >= _STRAIGHT_CELLS:
+            straight.update(between[:-1])
+        joined.extend(between)
     if contour.closed and len(joined) > 1:
         del joined[-1]
     clean = _drop_l_corners(joined, _corners(contour, cells), contour)
-    return even_out_steps(clean, closed=contour.closed)
+    return even_out_steps(clean, closed=contour.closed, straight=straight)
 
 
 def line_cells(path: Path) -> set[Cell]:
