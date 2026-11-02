@@ -105,6 +105,11 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 
 - F.I.R.S.T. Disco só via `tmp_path`; nada de rede, relógio ou aleatório sem semente.
 - Caminhos previsíveis: `src/ai_draw/<camada>/<modulo>.py` ↔ `tests/<camada>/test_<modulo>.py`.
+- Propriedade (Hypothesis, ADR-0006): no arquivo de teste do módulo, com o perfil do
+  `tests/conftest.py` (determinístico, sem banco). Vista falhar como qualquer teste; a que
+  descreve o que já existe, com o defeito plantado. O contraexemplo encolhido vira `@example`
+  no commit da correção. Explorar mais: `--hypothesis-profile=explore` (o teste de perfil
+  reprova nesse modo, de propósito).
 
 ## Estrutura
 

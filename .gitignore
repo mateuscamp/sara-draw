@@ -6,6 +6,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+# Hypothesis keeps a cache of the code's constants here even without a database (ADR-0006).
+.hypothesis/
 dist/
 build/
 *.egg-info/

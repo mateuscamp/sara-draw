@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from hypothesis import settings
 
 from architecture_rules import (
     MAX_FILE_LINES,
@@ -262,3 +263,12 @@ def test_io_rule_flags_the_other_common_ways_to_touch_disk(tmp_path: Path) -> No
     )
     package_dir = make_package(tmp_path, {"grid/x.py": source})
     assert len(io_only_violations(package_dir)) == 6
+
+
+def test_property_tests_run_the_same_examples_and_keep_none() -> None:
+    # ADR-0006: the profile in tests/conftest.py draws the same examples on every machine and
+    # saves none between runs.
+    active = settings.default
+    assert active is not None
+    assert active.derandomize
+    assert active.database is None
