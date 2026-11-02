@@ -159,3 +159,10 @@ def test_lint_reads_a_png_whatever_the_case_of_its_suffix(tmp_path: Path) -> Non
     target = tmp_path / "CLEAN.PNG"
     write_png(clean, target)
     assert main(["lint", str(target)]) == 0
+
+
+def test_render_to_a_place_it_cannot_write_exits_2(tmp_path: Path) -> None:
+    # Regression (audit M7, 01/11): the failed write left a traceback and exit 1.
+    blocker = tmp_path / "a_file"
+    _ = blocker.write_text("", encoding="utf-8")
+    assert main(["render", str(write_scene(tmp_path)), "-o", str(blocker / "out.png")]) == 2

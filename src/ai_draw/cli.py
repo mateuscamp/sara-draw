@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from ai_draw.grid.palette import collect, near_pairs, parse_hex, to_hex
 from ai_draw.io.live import INTERVAL, LiveSession, open_imv, run
 from ai_draw.io.png import read_png, write_png
-from ai_draw.io.scene import SceneError, load_scene
+from ai_draw.io.scene import load_scene
 from ai_draw.lint import lint
 
 if TYPE_CHECKING:
@@ -71,13 +71,18 @@ def _say(message: str) -> None:
     print(f"ai-draw: {message}", file=sys.stderr)  # noqa: T201  # motivo: CLI output for a human
 
 
+def _bad_input(error: Exception) -> int:
+    """Report a scene, setting or file the command cannot use; 0 and 1 mean other things."""
+    _say(str(error))
+    return EXIT_SCENE_ERROR
+
+
 def _render(arguments: _Arguments) -> int:
     try:
         canvas = load_scene(arguments.scene).enlarged(arguments.scale)
-    except (SceneError, ValueError) as error:
-        _say(str(error))
-        return EXIT_SCENE_ERROR
-    write_png(canvas, arguments.output or arguments.scene.with_suffix(".png"))
+        write_png(canvas, arguments.output or arguments.scene.with_suffix(".png"))
+    except (ValueError, OSError) as error:
+        return _bad_input(error)
     return 0
 
 
@@ -97,9 +102,8 @@ def _watch(arguments: _Arguments) -> int:
 def _palette(arguments: _Arguments) -> int:
     try:
         canvas = load_scene(arguments.scene)
-    except (SceneError, ValueError) as error:
-        _say(str(error))
-        return EXIT_SCENE_ERROR
+    except (ValueError, OSError) as error:
+        return _bad_input(error)
     used = collect({arguments.scene.stem: canvas})
     for use in used:
         print(f"{to_hex(use.color)}  {use.pixels} px")  # noqa: T201  # motivo: the command's output
@@ -117,8 +121,7 @@ def _lint(arguments: _Arguments) -> int:
         findings = lint(canvas, line=arguments.line, width=arguments.width, near=near)
     except (ValueError, OSError) as error:
         # 0 is clean and 1 is a finding, so a bad input exits 2 (audit A4).
-        _say(str(error))
-        return EXIT_SCENE_ERROR
+        return _bad_input(error)
     for finding in findings:
         detail = f" ({finding.detail})" if finding.detail else ""
         print(f"{finding.check}: {finding.count}{detail}")  # noqa: T201  # motivo: the command's output
