@@ -326,8 +326,21 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   arredonda o empate a partir da célula menor, e no espelho a célula menor é a outra ponta.
   É provavelmente a mesma causa da assimetria dos círculos grandes; fica pendente com eles,
   junto com os baixos B1–B9.
+- Fase 9, baixos (02/11): B1 (ponto isolado do traço suave), B2 (PNG de 16 bits em cinza),
+  B3 (cor validada em `outline` e `recolor`), B4 (`components` linear; o custo pelo tamanho do
+  caminho ficou como limite no README), B5 (contorno fechado de área zero com 1 px; a área usa
+  `math.fsum`, porque o `sum` do 3.11 deixava resíduo), B7 (docstring de `contour_side`), B8
+  (`wobble` valida a largura) e B9 (CI em 3.11 e 3.13, actions fixadas por SHA). O B6 ficou de
+  propósito: a linha aberta mantém o lado do seu sentido, com o qual o traço largo pareia o
+  pixel extra. Resto do M2: a causa não era o desempate das pontas, era o empate bem no meio
+  de um trecho, decidido a partir da célula menor. Agora ele vai para o lado de dentro da forma,
+  que o espelho preserva. Numa varredura de 3.481 elipses, as assimétricas caíram de 184 para
+  2 (`ellipse(40, 40, 1, 1.5)` e a transposta, de 1 px de raio), e dos círculos de raio 60 a 255,
+  de 28 para 0. A bancada e a galeria não mudaram. O wobble dos círculos a partir do raio 40
+  continua.
 
 ## Próximo passo
 
-Fase 9: `/code-audit` sobre o pacote inteiro. Pendente, registrado no README em "Limits":
-círculos grandes de 1 px leem octogonais e nenhum detector mede redondeza.
+Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo. Pendente,
+registrado no README em "Limits": círculos grandes de 1 px leem octogonais e nenhum detector
+mede redondeza; o wobble deles a partir do raio 40; e o ADR do Hypothesis, adiado.
