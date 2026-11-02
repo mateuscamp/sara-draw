@@ -96,3 +96,19 @@ de execução: `getattr(módulo, "nome")`, `exec`, `eval`, um nome montado em st
 de disco é uma lista de nomes: um método de disco que ela não lista, ou um apelido de `os`
 (`import os as sistema`), passa. A revisão
 (`/code-review` e `/code-audit`) cobre esse resto.
+
+## Emenda (02/11): o CI nas duas pontas da versão e as actions fixadas (auditoria B9)
+
+**Status:** Aceito pelo Mateus em 02/11 ("B9 no CI").
+
+- O CI roda o portão inteiro em duas versões do Python: 3.11, a mínima do `requires-python`,
+  e 3.13, a do `.python-version`. O `pythonVersion = "3.11"` já checava os tipos contra a 3.11,
+  mas nenhum teste rodava nela. A versão de cada job vem por `UV_PYTHON`, então o `portao.sh`
+  não muda. Antes do commit, o portão passou localmente em 3.11.15, com 335 testes.
+- As actions passam a ser fixadas pelo commit, com a tag num comentário
+  (`actions/checkout` v4.4.0, `actions/setup-python` v5.6.0), porque uma tag pode ser movida para
+  outro código. No dia, os SHAs eram os mesmos para que `v4` e `v5` apontavam, então o CI roda o
+  mesmo código de antes. Para atualizar, troque o SHA e o comentário juntos.
+
+**Perde:** o CI leva o dobro de tempo de máquina, e as atualizações das actions passam a ser
+feitas à mão.
