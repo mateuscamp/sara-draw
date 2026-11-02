@@ -102,6 +102,9 @@ with 1 when it finds one, so it can guard a build.
   reads rounder, with the L corners and wobble counted above.
 - A smooth stroke's inner corner is exact while the overlap of the two legs fits on them; a
   sharp turn between legs shorter than that is approximated through the vertex.
+- Smooth coverage is exact for one contour. Contours that overlap or touch are summed per
+  pixel, as FreeType does: two shapes touching with opposite directions leave a see-through
+  seam where they meet. Draw them as one contour, or in the same direction.
 
 ## How it is made
 

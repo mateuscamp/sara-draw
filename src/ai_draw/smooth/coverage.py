@@ -1,11 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Smooth output: how much of each pixel a shape covers, from 0 to 1, by exact area.
+"""Smooth output: how much of each pixel a shape covers, from 0 to 1, by signed area.
 
 Each edge drops its signed area into the cells it crosses, row by row; a running sum along
 the row turns that into coverage. It is the method of the fast font rasterizers (font-rs,
-stb_truetype 2), and it gives the exact area of a polygon inside each pixel. "nonzero" takes
-the absolute value, capped at 1; "evenodd" folds it. Like FreeType's, the "nonzero" cap
-counts twice the edge pixels where two contours overlap.
+stb_truetype 2), and it gives the exact area of one polygon inside each pixel. "nonzero" takes
+the absolute value, capped at 1; "evenodd" folds it.
+
+With several contours the sum is per pixel, not per point, as in FreeType (audit M3): where
+two contours overlap, "nonzero" counts the edge pixels twice; two shapes that touch with
+opposite directions cancel in the pixel they share and leave a see-through seam; and an
+"evenodd" pixel with more than one way in and out of the shape is folded once, as a whole,
+so it comes out wrong. Draw shapes that touch as one contour, or with the same direction.
 
     >>> from ai_draw.geometry.path import rect
     >>> [[round(value, 3) for value in row] for row in coverage(rect(0.5, 0, 2, 1), 3, 1)]
