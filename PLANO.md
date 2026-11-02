@@ -346,9 +346,17 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   heptágono em diante os lados perdiam o ritmo e o polígono arredondava. Ficou 0 de 236 e 0 de
   3.481, sem L, quebra ou assimetria nova; polígonos de 5 a 16 lados e quadrados girados iguais
   pixel a pixel; bancada e galeria iguais.
+- Redondeza (02/11): o detector `abrupt_steps` conta o degrau com mais que o dobro do seguinte
+  numa curva (o topo de 9 seguido de 3 no raio 40, que lia octogonal); o topo de uma forma
+  redonda conta pela metade, e quinas e retas não contam. A suavização passa um degrau do
+  maior para o menor enquanto um tiver mais que o dobro do outro; no topo, dos dois lados ao
+  mesmo tempo, e lados retos ficam de fora. Bancada: círculos de raio 20 a 100 de 64 para 0,
+  de raio 3 a 16 de 96 para 16 (sobram os raios 4 e 5 com centro na quina, cujo canto é um
+  pixel só entre dois degraus); varredura de elipses de 2.413 para 556, as muito estreitas.
+  Simetria, L e wobble iguais; polígonos iguais pixel a pixel. Mudaram o círculo e a onda da
+  galeria, aprovados pelo Mateus nas imagens.
 
 ## Próximo passo
 
-Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo. Pendente,
-registrado no README em "Limits": círculos grandes de 1 px leem octogonais e nenhum detector
-mede redondeza; e o ADR do Hypothesis, adiado.
+Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo. Pendente:
+o ADR do Hypothesis, adiado.
