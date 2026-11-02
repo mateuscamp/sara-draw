@@ -37,8 +37,12 @@ _CORNER_DEGREES = 45
 
 
 def _area(points: Sequence[Point]) -> float:
-    """Twice the signed area (shoelace); positive runs clockwise on screen, y down."""
-    return sum(
+    """Twice the signed area (shoelace); positive runs clockwise on screen, y down.
+
+    ``math.fsum`` and not ``sum``: a flat shape must come out exactly 0 (audit B5), and before
+    Python 3.12 ``sum`` left a residue such as -1.4e-14 there.
+    """
+    return math.fsum(
         x0 * y1 - x1 * y0
         for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]], strict=True)
     )
