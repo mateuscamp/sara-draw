@@ -315,6 +315,17 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   de saída do `lint`: 0 limpo, 1 defeito, 2 entrada inválida). Pendentes, sem autorização
   ainda: os achados médios e baixos do relatório da fase, e um novo, que já existia:
   círculos de 1 px a partir do raio 40 têm wobble, e a partir do 200, assimetria.
+- Fase 9, médios (01/11): M1 (ponto repetido na linha), M4 (a saída pixel recusa alfa
+  parcial; o ADR-0001 citava teste que não existia), M5 (NaN, inf e largura `2.0`), M6
+  (recarga do `watch`), M7 (`render` sem permissão de escrita sai 2), M8 (resíduo de
+  cobertura gravava cor sob alfa 0), M3 (limite documentado, como no FreeType) e M9
+  (verificadores ampliados; o que a AST não vê fica declarado no ADR-0005). M2 em parte: a
+  ponta de duas células das elipses estreitas perde as duas metades juntas, e os cantos em L
+  da varredura caíram de 76 para 0 em 2.418 elipses; a assimetria caiu de 117 para 49. As 49
+  restantes já saem assimétricas do mapeamento ponto a pixel: o Bresenham entre dois pontos
+  arredonda o empate a partir da célula menor, e no espelho a célula menor é a outra ponta.
+  É provavelmente a mesma causa da assimetria dos círculos grandes; fica pendente com eles,
+  junto com os baixos B1–B9.
 
 ## Próximo passo
 
