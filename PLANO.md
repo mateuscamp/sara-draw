@@ -368,6 +368,13 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   a troca que cria um a, b, a de corridas curtas. Amostra de 3.000: wobble de 160 para 14 (as
   14 já existiam antes da suavização, que ainda corrige outras 56); elipses da grade com degrau
   brusco de 556 para 588, o preço de não engordar o traço; círculos, bancada e galeria iguais.
+- Triângulo fino (02/11): a propriedade do preenchimento achou a lasca `(1, 20), (1, 21),
+  (10, 1)` em duas peças. A ponte só religava vãos de uma ou duas células do contorno; "vãos
+  maiores ficam abertos" vinha da fase 5, de antes de a ponte se limitar a uma forma por vez
+  (A1). Dentro de uma forma, as células do contorno nos caminhos mais curtos entre as peças
+  religam o vão; todos os caminhos mais curtos, para a lasca simétrica continuar espelhada.
+  Amostra de 3.000 triângulos: em pedaços de 91 para 0, pixel solto de 60 para 2; 200 lascas
+  simétricas continuam espelhadas; bancada e galeria iguais.
 
 ## Próximo passo
 
@@ -381,5 +388,7 @@ como vermelho e o contraexemplo como `@example`:
   (`ellipse(30, 30, 1.5, 10.026991306811004)`). Tentado e descartado: as pernas passarem um
   passo para o lado da forma, que brigava com a suavização (laço) e piorava a bancada e o traço
   de 2 px;
-- triângulo fino preenchido: 106 de 3.000 em pedaços e 75 com pixel solto (a lasca
-  `(3, 30.875), (4, 31), (12, 23)`), contra o "thin parts kept joined" do README.
+- lasca fina em toda a extensão: o preenchimento pega um só centro de pixel e sai um pixel
+  solto (2 de 3.000 triângulos; `(1, 22.5), (27, 9.25), (22.375, 12.09375)`). Desenhar o
+  contorno dessas formas mudaria tudo o que é menor que um pixel: decisão do Mateus. Registrado
+  no README em "Limits".
