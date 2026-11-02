@@ -45,9 +45,14 @@ def _area(points: Sequence[Point]) -> float:
 
 
 def contour_side(contour: Contour) -> float:
-    """``1.0`` when the inside of ``contour`` is to its left on screen (y down), else ``-1.0``.
+    """``1.0`` when the inside of ``contour`` is to its right on screen (y down), else ``-1.0``.
 
-    An open contour has no inside; its left counts as one, consistently.
+    That is a clockwise contour on screen, as ``rect`` draws it. An open contour has no inside;
+    its right counts as one, consistently. (The text said left until audit B7; the code is right.)
+
+    >>> from ai_draw.geometry.path import rect
+    >>> contour_side(rect(0, 0, 4, 4).contours()[0])
+    1.0
     """
     return -1.0 if contour.closed and _area(contour.points) < 0 else 1.0
 
