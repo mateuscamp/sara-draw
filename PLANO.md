@@ -355,8 +355,20 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   pixel só entre dois degraus); varredura de elipses de 2.413 para 556, as muito estreitas.
   Simetria, L e wobble iguais; polígonos iguais pixel a pixel. Mudaram o círculo e a onda da
   galeria, aprovados pelo Mateus nas imagens.
+- Hypothesis (02/11, ADR-0006): no grupo `dev`, perfil determinístico e sem banco no
+  `tests/conftest.py`, `.hypothesis/` no `.gitignore`. Um protótipo descartável mediu o que ele
+  acrescenta sobre uma amostra com semente: o contraexemplo encolhido e o viés para as bordas.
+  Entraram as quatro propriedades que passam hoje (ida e volta do PNG, `then` associativa, área
+  da cobertura suave, linha aberta igual nos dois sentidos fora das divisas), cada uma vista
+  falhar com o defeito plantado, e o teste que confere o perfil.
 
 ## Próximo passo
 
-Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo. Pendente:
-o ADR do Hypothesis, adiado.
+Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo.
+
+Pendente, achado pelo Hypothesis no protótipo do ADR-0006, cada um com a sua propriedade
+como vermelho e o contraexemplo como `@example`:
+- elipse com raios fora da grade de meios: wobble em 160 de 3.000 (5%), 3 assimétricas e 1 com
+  L (`ellipse(30, 30, 1.5, 10.026991306811004)` sai com 2 cantos em L);
+- triângulo fino preenchido: 106 de 3.000 em pedaços e 75 com pixel solto (a lasca
+  `(3, 30.875), (4, 31), (12, 23)`), contra o "thin parts kept joined" do README.
