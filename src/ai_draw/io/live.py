@@ -14,6 +14,8 @@ it seems: a scene is a few kilobytes.
 
 from __future__ import annotations
 
+import contextlib
+import importlib
 import subprocess
 import sys
 import time
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 INTERVAL = 0.2
+_PACKAGE = __name__.partition(".")[0]
 
 
 class Viewer(Protocol):
@@ -55,15 +58,38 @@ def _read(path: Path) -> bytes:
         return b""
 
 
-def _forget_siblings(folder: Path) -> None:
-    """Forget the modules loaded from the scene's own folder, so an edited helper reloads.
+def _imported_from(folder: Path, name: str, file: object) -> bool:
+    """True when the module came in through the scene's folder, as ``helper`` or ``pkg.helper``.
 
-    Only that folder: dropping numpy or ai_draw from sys.modules would break them.
+    Its top-level name must live in that folder: numpy or ai_draw under a ``.venv`` or ``src``
+    inside it came in through their own sys.path entry, and dropping them would break them.
+    """
+    top_name = name.partition(".")[0]
+    top = folder / top_name
+    # ai_draw itself never goes, even from src/: a second Canvas class would fail every scene.
+    if top_name == _PACKAGE or not (top.is_dir() or top.with_suffix(".py").is_file()):
+        return False
+    return isinstance(file, str) and Path(file).resolve().is_relative_to(folder)
+
+
+def _forget_siblings(folder: Path) -> None:
+    """Forget the modules imported from the scene's folder, so an edited helper reloads.
+
+    Their cached bytecode goes too: an edit in the same second, of the same size, would pass
+    the .pyc's timestamp check and load the old code (audit M6).
     """
     for name, module in list(sys.modules.items()):
-        file = getattr(module, "__file__", None)
-        if isinstance(file, str) and Path(file).resolve().parent == folder:
+        if _imported_from(folder, name, getattr(module, "__file__", None)):
             del sys.modules[name]
+            _drop_bytecode(getattr(module, "__cached__", None))
+    importlib.invalidate_caches()
+
+
+def _drop_bytecode(cached: object) -> None:
+    """Delete a stale .pyc if it can; a cache it cannot delete must not end the session."""
+    if isinstance(cached, str):
+        with contextlib.suppress(OSError):
+            Path(cached).unlink(missing_ok=True)
 
 
 class LiveSession:
@@ -91,10 +117,10 @@ class LiveSession:
         _forget_siblings(self.scene.resolve().parent)
         try:
             canvas = load_scene(self.scene).enlarged(self._scale)
-        except Exception as error:  # noqa: BLE001  # motivo: a broken scene must not end the session
+            write_png(canvas, self.output)
+        except Exception as error:  # noqa: BLE001  # motivo: a broken scene or a failed write must not end the session
             reason = f"{type(error).__name__}: {error}"
             return PollResult(drew=False, message=f"{reason}; kept the last good picture")
-        write_png(canvas, self.output)
         size = f"{canvas.width}x{canvas.height}"
         return PollResult(drew=True, message=f"drew {self.scene.name} -> {self.output} ({size})")
 
