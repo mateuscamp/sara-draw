@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from pathlib import Path
 
+import numpy as np
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 from PIL import Image
 
 from ai_draw.grid.canvas import Canvas
@@ -33,3 +36,24 @@ def test_read_png_scales_16_bit_gray_down_to_8_bits(tmp_path: Path) -> None:
         (128, 128, 128, 255),
         (255, 255, 255, 255),
     ]
+
+
+@st.composite
+def _canvases(draw: st.DrawFn) -> Canvas:
+    width, height = draw(st.integers(1, 6)), draw(st.integers(1, 6))
+    channels = st.lists(
+        st.integers(0, 255), min_size=width * height * 4, max_size=width * height * 4
+    )
+    pixels = np.array(draw(channels), dtype=np.uint8).reshape(height, width, 4)
+    return Canvas.from_pixels(pixels)
+
+
+@settings(
+    suppress_health_check=[HealthCheck.function_scoped_fixture]
+)  # motivo: one file, rewritten each example
+@given(_canvases())
+def test_any_canvas_comes_back_from_png_unchanged(tmp_path: Path, canvas: Canvas) -> None:
+    # Property (ADR-0006): every channel of every pixel survives the round trip, alpha 0 too.
+    target = tmp_path / "round.png"
+    write_png(canvas, target)
+    assert read_png(target).same_pixels(canvas)

@@ -3,6 +3,8 @@ import math
 from collections.abc import Callable
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from ai_draw.errors import GeometryError
 from ai_draw.geometry.transform import Transform
@@ -54,3 +56,23 @@ def test_then_applies_self_first() -> None:
 def test_a_transform_that_is_not_finite_is_refused(build: Callable[[], Transform]) -> None:
     with pytest.raises(GeometryError, match="finite"):
         _ = build()
+
+
+def _transform(angle: float, sx: float, sy: float, dx: float, dy: float) -> Transform:
+    return Transform.rotate(angle).then(Transform.scale(sx, sy)).then(Transform.translate(dx, dy))
+
+
+_ANGLES = st.floats(-360, 360)
+_FACTORS = st.floats(0.25, 4)
+_SHIFTS = st.floats(-50, 50)
+_TRANSFORMS = st.builds(_transform, _ANGLES, _FACTORS, _FACTORS, _SHIFTS, _SHIFTS)
+
+
+@given(_TRANSFORMS, _TRANSFORMS, _TRANSFORMS, _SHIFTS, _SHIFTS)
+def test_then_is_associative(
+    first: Transform, second: Transform, third: Transform, x: float, y: float
+) -> None:
+    # Property (ADR-0006): grouping a chain of transforms never moves a point.
+    left = first.then(second).then(third).apply(x, y)
+    right = first.then(second.then(third)).apply(x, y)
+    assert left == pytest.approx(right, abs=1e-6)

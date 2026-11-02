@@ -2,9 +2,11 @@
 import time
 
 import pytest
+from hypothesis import assume, given
+from hypothesis import strategies as st
 
 from ai_draw.errors import ColorError
-from ai_draw.geometry.path import Path, ellipse, polygon, rect
+from ai_draw.geometry.path import Path, Point, ellipse, polygon, rect
 from ai_draw.geometry.transform import Transform
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
@@ -200,3 +202,21 @@ def test_circles_have_no_abrupt_step(radius: int) -> None:
     for center in (radius + 3, radius + 3.5):
         cells = frozenset(line_cells(ellipse(center, center, radius)))
         assert abrupt_steps(cells) == 0, f"center {center}"
+
+
+_ON_CANVAS = st.floats(0.3, 30)
+
+
+def _on_an_edge(value: float) -> bool:
+    """Within the rounding that treats a point as lying on a pixel edge (``_SNAP_DECIMALS``)."""
+    return abs(value - round(value)) < 1e-9  # line.py rounds to 9 decimals
+
+
+@given(st.tuples(_ON_CANVAS, _ON_CANVAS), st.tuples(_ON_CANVAS, _ON_CANVAS))
+def test_an_open_line_off_the_pixel_edges_is_the_same_both_ways(start: Point, end: Point) -> None:
+    # Property (ADR-0006). On a pixel edge the direction decides, on purpose (audit B6); the
+    # first draft of this property found 1.0000000000000002, which rounds onto the edge.
+    _ = assume(not any(_on_an_edge(value) for value in (*start, *end)))
+    forward = line_cells(Path().move_to(*start).line_to(*end))
+    backward = line_cells(Path().move_to(*end).line_to(*start))
+    assert forward == backward

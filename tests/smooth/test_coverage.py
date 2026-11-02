@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
-import pytest
+import math
 
-from ai_draw.geometry.path import Path, polygon, rect
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
+from ai_draw.geometry.path import Path, Point, polygon, rect
 from ai_draw.smooth.coverage import coverage
 from bench_cases import heart
 from freetype_oracle import freetype_coverage
@@ -67,3 +71,18 @@ def test_a_curve_is_flattened_finely_enough_for_the_coverage() -> None:
         for a, b in zip(row, ref, strict=True)
     )
     assert worst <= ONE_STEP
+
+
+_INSIDE = st.floats(1, 31)
+
+
+def _area(corners: list[Point]) -> float:
+    ends = [*corners[1:], corners[0]]
+    return abs(sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(corners, ends, strict=True))) / 2
+
+
+@given(st.lists(st.tuples(_INSIDE, _INSIDE), min_size=3, max_size=3))
+def test_the_coverage_of_a_triangle_adds_up_to_its_area(corners: list[Point]) -> None:
+    # Property (ADR-0006): one contour inside the canvas is covered exactly, pixel by pixel.
+    rows = coverage(polygon(corners), 32, 32)
+    assert math.fsum(map(math.fsum, rows)) == pytest.approx(_area(corners), abs=1e-6)
