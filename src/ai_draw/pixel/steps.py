@@ -15,6 +15,7 @@ two lengths at most, and their rhythm stays.
 
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -268,6 +269,38 @@ def _unmixed(stretch: _Stretch, trades: list[tuple[int, int, Step]]) -> list[tup
     return [trade for trade in trades if not mixed & {trade[0], trade[1]}]
 
 
+def _swings(runs: list[list[Step]], *, closed: bool) -> set[int]:
+    """The runs in an a, b, a of short runs on one axis: the stroke that swells and thins.
+
+    Read across the line, a 1 between two 2s (or a 2 between two 1s) is the wobble the detector
+    counts. A run across the axis lays one cell on each line of it, so it reads as 1.
+    """
+    count, found = len(runs), set[int]()
+    middles = range(count) if closed else range(1, count - 1)
+    for middle, axis in itertools.product(middles, (0, 1)):
+        trio = [(middle + offset) % count for offset in (-1, 0, 1)]
+        first, second, third = (_cells_along(runs[i], axis) or 1 for i in trio)
+        if first == third != second and max(first, second) <= 2:  # noqa: PLR2004  # motivo: the one-pixel line's swing
+            found.update(trio)
+    return found
+
+
+def _no_new_swing(
+    stretch: _Stretch, trades: list[tuple[int, int, Step]]
+) -> list[tuple[int, int, Step]]:
+    """The trades, unless together they make a swing that was not there (``_swings``).
+
+    The side of a narrow shape is long next to a tip of one cell: passing a cell to the runs
+    beside the tip makes 2, 1, 2 across it, a wobble worse than the step it smooths.
+    """
+    after = [list(run) for run in stretch.runs]
+    for giver, taker, step in trades:
+        after[giver].remove(step)
+        after[taker].append(step)
+    new = _swings(after, closed=stretch.closed) - _swings(stretch.runs, closed=stretch.closed)
+    return [trade for trade in trades if not new & {trade[0], trade[1]}]
+
+
 def _soften(stretch: _Stretch, held: list[bool]) -> Step:
     """Pass a step from a run to its neighbor while one is over twice the other.
 
@@ -280,8 +313,11 @@ def _soften(stretch: _Stretch, held: list[bool]) -> Step:
     run, and a trade across that seam carries the start with it.
     """
     start = (0, 0)
-    while trades := _unmixed(
-        stretch, [t for i in range(len(stretch.runs)) for t in _gentler(stretch, i, held)]
+    while trades := _no_new_swing(
+        stretch,
+        _unmixed(
+            stretch, [t for i in range(len(stretch.runs)) for t in _gentler(stretch, i, held)]
+        ),
     ):
         for giver, taker, step in trades:
             stretch.runs[giver].remove(step)

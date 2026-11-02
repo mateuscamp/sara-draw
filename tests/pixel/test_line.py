@@ -2,7 +2,7 @@
 import time
 
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume, example, given
 from hypothesis import strategies as st
 
 from ai_draw.errors import ColorError
@@ -220,3 +220,25 @@ def test_an_open_line_off_the_pixel_edges_is_the_same_both_ways(start: Point, en
     forward = line_cells(Path().move_to(*start).line_to(*end))
     backward = line_cells(Path().move_to(*end).line_to(*start))
     assert forward == backward
+
+
+_HALVES = st.integers(60, 100).map(lambda doubled: doubled / 2)
+_RADII = st.floats(1.5, 18)
+
+
+@given(_HALVES, _HALVES, _RADII, _RADII)
+@example(cx=30.5, cy=30.0, rx=2.0, ry=5.0)
+@example(cx=30.0, cy=30.0, rx=7.0, ry=6.125)
+def test_the_line_of_any_ellipse_is_one_clean_mirrored_ring(
+    cx: float, cy: float, rx: float, ry: float
+) -> None:
+    # Property (ADR-0006). The grid sweeps only tried centers on whole pixels. Both examples are
+    # the softening of abrupt steps making a stroke swell and thin (2, 1, 2), which 146 of 3,000
+    # random ellipses had (02/11). Still pending, older than the softening and found with
+    # --hypothesis-profile=explore: the tip of a narrow ellipse centered on a pixel, as
+    # ellipse(30.5, 30.5, 2, 6), whose legs end on a pixel edge.
+    cells = frozenset(line_cells(ellipse(cx, cy, rx, ry)))
+    assert (components(cells), orphans(cells)) == (1, 0)
+    assert l_corners(cells) == 0
+    assert wobble(cells, 1) == 0
+    assert asymmetric_cells(cells, mirror_x=cx, mirror_y=cy) == 0
