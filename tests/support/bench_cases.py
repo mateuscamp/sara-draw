@@ -17,6 +17,7 @@ from ai_draw.geometry.transform import Transform
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.pixel.defects import (
     Cells,
+    abrupt_steps,
     asymmetric_cells,
     cells_of,
     components,
@@ -123,7 +124,8 @@ def circle_stroke(radius: int) -> Score:
     center = radius + 3
     cells = stroked((2 * center, 2 * center), ellipse(center, center, radius), 1)
     asymmetry = asymmetric_cells(cells, mirror_x=center, mirror_y=center)
-    return {**line_score(cells, 1), "asymmetry": asymmetry, "l_corners": l_corners(cells)}
+    corners = {"l_corners": l_corners(cells), "abrupt_steps": abrupt_steps(cells)}
+    return {**line_score(cells, 1), "asymmetry": asymmetry, **corners}
 
 
 def straight_line(run: int, *, steep: bool) -> Score:
@@ -154,6 +156,7 @@ CASES: dict[str, Callable[[], Score]] = {
     "heart_fill": heart_fill,
     "circle_fill_r2_to_r16": lambda: total([circle_fill(r) for r in range(2, 17)]),
     "circle_stroke_1px_r3_to_r16": lambda: total([circle_stroke(r) for r in range(3, 17)]),
+    "circle_stroke_1px_r20_to_r100": lambda: total([circle_stroke(r) for r in range(20, 101, 10)]),
     "lines_1px_1to1_to_1to6": lambda: total(
         [straight_line(run, steep=steep) for run in range(1, 7) for steep in (False, True)]
     ),

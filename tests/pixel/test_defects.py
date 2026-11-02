@@ -8,6 +8,7 @@ from ai_draw.grid.canvas import Color
 from ai_draw.grid.rows import from_rows
 from ai_draw.pixel.defects import (
     Cells,
+    abrupt_steps,
     asymmetric_cells,
     cells_of,
     components,
@@ -137,3 +138,43 @@ def test_components_of_many_loose_pixels_take_linear_time() -> None:
     elapsed = time.perf_counter() - start
     assert count == 40_000
     assert elapsed < 0.5
+
+
+CLEAN_CIRCLE = (
+    ".....######.....",
+    "...##......##...",
+    "..#..........#..",
+    ".#............#.",
+    ".#............#.",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    ".#............#.",
+    ".#............#.",
+    "..#..........#..",
+    "...##......##...",
+    ".....######.....",
+)
+
+
+def test_a_circle_whose_steps_change_gently_has_no_abrupt_step() -> None:
+    assert abrupt_steps(cells(*CLEAN_CIRCLE)) == 0
+
+
+def test_a_step_more_than_twice_the_next_on_a_curve_is_abrupt() -> None:
+    # The octagon look of a large circle: a long flat top, then short steps at once.
+    assert abrupt_steps(cells("#########...", ".........##.", "...........#")) == 1
+
+
+def test_the_top_of_a_round_shape_counts_half_its_length() -> None:
+    # The top is shared by both sides: 10 is 5 per side, abrupt against 1; 4 is 2, gentle.
+    assert abrupt_steps(cells(".##########.", "#..........#")) == 2
+    assert abrupt_steps(cells(".####.", "#....#")) == 0
+
+
+def test_corners_and_straight_lines_have_no_abrupt_step() -> None:
+    assert abrupt_steps(cells("#########", "#.......#", "#########")) == 0
+    assert abrupt_steps(cells("###......", "...###...", "......###")) == 0

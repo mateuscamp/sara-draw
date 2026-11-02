@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 Cell = tuple[int, int]
 Cells = frozenset[Cell]
 
+# A step this long or longer may be abrupt; 2 against 1 is how any curve leaves a straight run.
+_ABRUPT_FROM = 3
 _EIGHT = tuple((dx, dy) for dx, dy in itertools.product((-1, 0, 1), repeat=2) if dx or dy)
 
 
@@ -264,3 +266,56 @@ def asymmetric_cells(
         offset = _mirror_offset(mirror_y, "mirror_y")
         count += sum(1 for x, y in cells if (x, offset - y) not in cells)
     return count
+
+
+def _lines_of_runs(cells: Cells, *, by_rows: bool) -> dict[int, list[Run]]:
+    per_line: dict[int, list[int]] = {}
+    for x, y in cells:
+        line, position = (y, x) if by_rows else (x, y)
+        per_line.setdefault(line, []).append(position)
+    return {line: _runs(positions) for line, positions in per_line.items()}
+
+
+def _continues(first: Run, second: Run) -> bool:
+    """``second``, on the next line, starts where ``first`` ends, corner to corner: a curve."""
+    return second[0] == first[1] + 1 or second[1] == first[0] - 1
+
+
+def _reach(run: Run, line: int, runs: dict[int, list[Run]]) -> float:
+    """The length of a step; half of it on top of a round shape, shared by both sides."""
+    near = {
+        side: [other for other in runs.get(line + side, []) if _continues(run, other)]
+        for side in (-1, 1)
+    }
+    length = run[1] - run[0] + 1
+    shared = any(len(near[side]) > 1 and not near[-side] for side in (-1, 1))
+    return length / 2 if shared else length
+
+
+def _abrupt_on(cells: Cells, *, by_rows: bool) -> int:
+    runs = _lines_of_runs(cells, by_rows=by_rows)
+    count = 0
+    for line, here in runs.items():
+        for run, below in itertools.product(here, runs.get(line + 1, [])):
+            if not _continues(run, below):
+                continue
+            longer, shorter = sorted((_reach(run, line, runs), _reach(below, line + 1, runs)))[::-1]
+            count += longer > 2 * shorter and longer >= _ABRUPT_FROM
+    return count
+
+
+def abrupt_steps(cells: Cells) -> int:
+    """Count where a curve's step is more than twice the next: the octagon look.
+
+    A step is a run along a row (or a column); the next one starts corner to corner from it.
+    The top of a round shape, shared by its two sides, counts half its length. A corner, where
+    the next run starts right under the end of the step, and a straight line, whose steps
+    differ by one at most, never count. Meant for round shapes: a long straight side that
+    meets a small rounded corner counts too.
+
+    >>> from ai_draw.grid.rows import from_rows
+    >>> flat_then_steep = from_rows(["#########...", ".........##."], {"#": (0, 0, 0, 255)})
+    >>> abrupt_steps(cells_of(flat_then_steep))
+    1
+    """
+    return _abrupt_on(cells, by_rows=True) + _abrupt_on(cells, by_rows=False)
