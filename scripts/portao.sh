@@ -29,7 +29,7 @@ etapa "supressão sem motivo"
 # Supressão de linha: `# noqa: S603  # motivo: ...` ou `# pyright: ignore[regra]  # motivo: ...`.
 # Diretiva de arquivo (`# pyright: reportAny=false`): `# motivo: ...` na linha de cima.
 # Diretivas seguidas formam um bloco; basta o motivo na linha antes do bloco.
-sem_motivo="$(git ls-files '*.py' | xargs -r awk '
+sem_motivo="$(git ls-files --cached --others --exclude-standard '*.py' | xargs -r awk '
   FNR == 1 { anterior = ""; aceita = 0 }
   /^# *pyright: *[a-zA-Z]/ && !/pyright: *ignore/ {
     aceita = (anterior ~ /motivo:/) || aceita

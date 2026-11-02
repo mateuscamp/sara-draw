@@ -64,8 +64,8 @@ ban-relative-imports = "all" # AGENTS.md: imports are absolute
 [tool.basedpyright]
 typeCheckingMode = "all"            # stricter than the trail's "recommended" (ADR-0005)
 pythonVersion = "3.11"              # a library: the oldest Python it supports (ADR-0005)
-include = ["src", "tests", "examples"]
-extraPaths = ["tests/support"]
+include = ["src", "tests", "examples", "docs"]
+extraPaths = ["tests/support", "docs/gallery"]
 enableTypeIgnoreComments = false    # only `# pyright: ignore[rule]`, which names the rule
 reportIgnoreCommentWithoutRule = "error"
 reportUnnecessaryTypeIgnoreComment = "error"

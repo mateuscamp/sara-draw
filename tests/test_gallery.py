@@ -28,9 +28,27 @@ def test_the_readme_table_is_what_the_bench_measures_today() -> None:
     assert callable(markdown)
     table = markdown()
     assert isinstance(table, str)
-    assert table in README.read_text(encoding="utf-8"), (
+    assert table in visible(README.read_text(encoding="utf-8")), (
         "paste: uv run python docs/gallery/scores.py"
     )
+
+
+def visible(markdown: str) -> str:
+    """The README as a reader sees it: without the <!-- --> comments."""
+    return re.sub(r"<!--.*?-->", "", markdown, flags=re.DOTALL)
+
+
+def test_a_table_hidden_in_a_comment_does_not_count() -> None:
+    # Regression (audit M9, 01/11): the table passed inside <!-- -->, where no reader sees it.
+    assert "| a |" not in visible("text\n<!--\n| a |\n-->\nmore")
+
+
+def test_the_readme_shows_the_comparison_picture() -> None:
+    images: list[str] = re.findall(
+        r"!\[[^\]]*\]\(([^)]+)\)", visible(README.read_text(encoding="utf-8"))
+    )
+    assert "docs/gallery/compare.png" in images
+    assert all((ROOT / image).exists() for image in images if "://" not in image)
 
 
 def test_the_readme_example_runs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

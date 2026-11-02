@@ -72,5 +72,27 @@ Revisitar se um upgrade do Ruff reprovar mais de uma vez por mês.
 | `errors` sob todas as camadas | `tests/architecture` | pytest | `errors` importa outra camada, ou camada fora da tabela |
 | configuração só no `pyproject.toml` (auditoria G2, 01/11) | `tests/architecture` e o portão passando o `pyproject.toml` a cada ferramenta | `make check`, hook, CI | existe `.ruff.toml`, `ruff.toml`, `pyrightconfig.json`, `pytest.ini`, `tox.ini` ou `setup.cfg` |
 | ninguém afrouxa o portão | `AGENTS.md` e `/code-audit` | revisão | mudança em `[tool.ruff]`, `[tool.basedpyright]` ou `[tool.pytest]` sem ADR |
+| todo `.py` do repositório sob SPDX, tamanho e nomes (auditoria M9, 01/11) | `source_paths` em `tests/architecture`, que varre a raiz inteira menos as pastas locais | pytest | arquivo novo na raiz ou em pasta nova sem SPDX, longo demais ou com nome vago |
+| disco e carga por nome só em `io/` (auditoria M9) | `io_only_violations` em `tests/architecture` | pytest | `open`, `read_text`/`write_text`, `mkdir`, `touch`, `np.save`, `import_module`, `run_path`, `__import__`, qualquer coisa de `os` ou `shutil` e afins fora de `io/` |
 
 Regra derivada no `AGENTS.md`: seção "Python".
+
+## Emenda (01/11): pontos cegos dos verificadores (auditoria M9)
+
+**Status:** Aceito pelo Mateus em 01/11 ("ampliar o que dá"). Ampliados:
+
+- `docs/gallery` entra no basedpyright (`include` e `extraPaths`). As quatro chamadas ao
+  `skimage.draw`, que não tem tipos, levam `# pyright: ignore[...]  # motivo:` na linha.
+- A etapa de supressão do portão lê também os `.py` ainda não rastreados.
+- O hook Stop tira a impressão digital de qualquer arquivo (`git diff --binary` e os novos), e
+  não só de `.py`, `pyproject.toml` e `uv.lock`: `score.json`, README, PNG e configs contam.
+- O teste do README lê o texto sem os comentários `<!-- -->` e exige a imagem da comparação
+  num link que existe.
+- As regras de arquitetura passam a ver: `.py` em qualquer pasta, `ImageOps`, disco e carga por
+  nome fora de `io/`, e os nomes dados por `self.x =`, `import a as x` e `except E as x`.
+
+**Limite declarado, que fica:** as regras leem a AST, então não veem o que só existe em tempo
+de execução: `getattr(módulo, "nome")`, `exec`, `eval`, um nome montado em string. E a regra
+de disco é uma lista de nomes: um método de disco que ela não lista, ou um apelido de `os`
+(`import os as sistema`), passa. A revisão
+(`/code-review` e `/code-audit`) cobre esse resto.

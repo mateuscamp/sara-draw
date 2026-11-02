@@ -78,7 +78,7 @@ def circle(engine: Engine, radius: int) -> Canvas:
     center = radius + 3
     canvas = blank(2 * center, 2 * center)
     if engine == "skimage":
-        _paint(canvas, *skdraw.circle_perimeter(center, center, radius))
+        _paint(canvas, *skdraw.circle_perimeter(center, center, radius))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]  # motivo: skimage ships no types
     else:
         _draw(engine, canvas, ellipse(center, center, radius), 1)
     return canvas
@@ -91,7 +91,7 @@ def line(engine: Engine, run: int, *, steep: bool = False, steps: int = 4) -> Ca
     canvas = blank(width, height)
     end = (1 + short, 1 + long) if steep else (1 + long, 1 + short)
     if engine == "skimage":
-        _paint(canvas, *skdraw.line(1, 1, end[1], end[0]))
+        _paint(canvas, *skdraw.line(1, 1, end[1], end[0]))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]  # motivo: skimage ships no types
     else:
         _draw(engine, canvas, Path().move_to(1.5, 1.5).line_to(end[0] + 0.5, end[1] + 0.5), 1)
     return canvas
@@ -106,7 +106,7 @@ def wave(engine: Engine) -> Canvas:
     if engine == "skimage":
         for i in range(0, len(WAVE_POINTS) - 2, 2):
             (x0, y0), (x1, y1), (x2, y2) = WAVE_POINTS[i : i + 3]
-            _paint(canvas, *skdraw.bezier_curve(y0, x0, y1, x1, y2, x2, 1))
+            _paint(canvas, *skdraw.bezier_curve(y0, x0, y1, x1, y2, x2, 1))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]  # motivo: skimage ships no types
         return canvas
     path = Path().move_to(*WAVE_POINTS[0])
     for i in range(1, len(WAVE_POINTS) - 1, 2):
@@ -124,7 +124,7 @@ def star(engine: Engine) -> Canvas:
         # skimage samples pixel (x, y) at the point (x, y); ai-draw at (x + 0.5, y + 0.5)
         rows = [y - 0.5 for _, y in points]
         columns = [x - 0.5 for x, _ in points]
-        _paint(canvas, *skdraw.polygon(rows, columns, (32, 32)))
+        _paint(canvas, *skdraw.polygon(rows, columns, (32, 32)))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]  # motivo: skimage ships no types
     elif engine == "raw":
         _raw_fill(canvas, polygon(points), "evenodd")
     elif engine == "pixel":

@@ -16,8 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "ai_draw"
 PACKAGE_DIR = ROOT / "src" / PACKAGE
 SPDX = "# SPDX-License-Identifier: GPL-3.0-only"
-# Every Python file the repository ships: the package, its tests and the examples.
-SOURCE_FOLDERS = (PACKAGE_DIR, ROOT / "tests", ROOT / "examples", ROOT / "docs" / "gallery")
+# Folders that hold no shipped source: tool caches, builds and notes/, which is local and
+# private (ADR-0004). Any other .py in the repository is source, wherever it lands (audit M9).
+_NOT_SOURCE = frozenset({"notes", "build", "dist", "out", "node_modules", "__pycache__"})
 
 # ADR-0001: the layers each layer may import. Modules right under ai_draw/ (cli.py,
 # __init__.py) stitch the layers together and may import any of them.
@@ -53,7 +54,18 @@ BANNED_NAMES = frozenset(
     | {"item", "obj"},
 )
 # ADR-0002: Pillow draws and resamples by its own rules; the pixel output must not inherit them.
-BANNED_ATTRIBUTES = frozenset({"ImageDraw", "resize"})
+# ImageOps.scale resamples too (audit M9).
+BANNED_ATTRIBUTES = frozenset({"ImageDraw", "ImageOps", "resize"})
+# ADR-0001: only io/ touches disk or loads code by name; an AST sees these names, not a call
+# reached through getattr or exec (declared in ADR-0005).
+IO_ONLY_CALLS = frozenset({"open", "__import__", "import_module", "run_path"})
+IO_ONLY_ATTRIBUTES = frozenset(
+    {"read_text", "write_text", "read_bytes", "write_bytes", "mkdir", "unlink", "rmdir"}
+    | {"rename", "import_module", "run_path", "exec_module", "open", "touch"}
+    | {"save", "savez", "savetxt", "tofile"},
+)
+# Anything taken from these modules is disk or process work; a bare `remove` could be a list's.
+IO_ONLY_MODULES = frozenset({"os", "shutil"})
 
 
 # --- rules -----------------------------------------------------------------------------
@@ -208,16 +220,26 @@ def size_violations(paths: list[Path]) -> list[str]:
     return violations
 
 
+def _defined_name(node: ast.AST) -> str | None:
+    """The name ``node`` gives, if it gives one: a def, an argument, an assignment target,
+    an ``import x as y``, an ``except E as e`` or ``self.y = ...`` (audit M9)."""
+    if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+        return node.name
+    if isinstance(node, ast.arg):
+        return node.arg
+    if isinstance(node, ast.Name | ast.Attribute) and isinstance(node.ctx, ast.Store):
+        return node.id if isinstance(node, ast.Name) else node.attr
+    if isinstance(node, ast.alias | ast.ExceptHandler):
+        return node.asname if isinstance(node, ast.alias) else node.name
+    return None
+
+
 def defined_names(tree: ast.Module) -> list[tuple[str, int]]:
-    found: list[tuple[str, int]] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
-            found.append((node.name, node.lineno))
-        elif isinstance(node, ast.arg):
-            found.append((node.arg, node.lineno))
-        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
-            found.append((node.id, node.lineno))
-    return found
+    return [
+        (name, getattr(node, "lineno", 1))
+        for node in ast.walk(tree)
+        if (name := _defined_name(node)) is not None
+    ]
 
 
 def name_violations(paths: list[Path]) -> list[str]:
@@ -234,6 +256,8 @@ def attribute_uses(tree: ast.Module) -> list[tuple[str, int]]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             found.append((node.attr, node.lineno))
+            if isinstance(node.value, ast.Name):
+                found.append((node.value.id, node.lineno))
         elif isinstance(node, ast.Import | ast.ImportFrom):
             found.extend((alias.name.split(".")[-1], node.lineno) for alias in node.names)
     return found
@@ -261,8 +285,17 @@ def make_package(tmp_path: Path, files: dict[str, str]) -> Path:
     return package_dir
 
 
-def source_paths() -> list[Path]:
-    return [path for folder in SOURCE_FOLDERS for path in python_files(folder)]
+def source_paths(root: Path = ROOT) -> list[Path]:
+    """Every Python file of the repository, at the root or in any folder but the local ones."""
+    return [
+        path
+        for path in python_files(root)
+        if not any(part.startswith(".") or part in _NOT_SOURCE for part in _folders(path, root))
+    ]
+
+
+def _folders(path: Path, root: Path) -> tuple[str, ...]:
+    return path.relative_to(root).parts[:-1]
 
 
 # ADR-0005, audit G2: a tool reads its own file before pyproject.toml, so one stray file would
@@ -280,3 +313,27 @@ def stray_configs(root: Path) -> list[str]:
         for path in root.rglob("*")
         if path.name in STRAY_CONFIGS and not _NOT_SCANNED & set(path.relative_to(root).parts)
     )
+
+
+def io_only_uses(tree: ast.Module) -> list[tuple[str, int]]:
+    found: list[tuple[str, int]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            found.extend([(node.func.id, node.lineno)] if node.func.id in IO_ONLY_CALLS else [])
+        elif isinstance(node, ast.Attribute) and node.attr in IO_ONLY_ATTRIBUTES:
+            found.append((node.attr, node.lineno))
+        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            module = node.value.id
+            found.extend(
+                [(f"{module}.{node.attr}", node.lineno)] if module in IO_ONLY_MODULES else []
+            )
+    return found
+
+
+def io_only_violations(package_dir: Path) -> list[str]:
+    return [
+        f"{where(path, line)}: {name!r} outside io/; disk and loading by name live there (ADR-0001)"
+        for path in python_files(package_dir)
+        if layer_of(path, package_dir) != "io"
+        for name, line in io_only_uses(parse(path))
+    ]

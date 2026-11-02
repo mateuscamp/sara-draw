@@ -20,6 +20,7 @@ from architecture_rules import (
     attribute_violations,
     cycle_violations,
     import_violations,
+    io_only_violations,
     license_problem,
     make_package,
     name_violations,
@@ -200,3 +201,64 @@ def test_stray_tool_config_is_flagged(tmp_path: Path, name: str) -> None:
 
 def test_tools_read_their_settings_only_from_pyproject() -> None:
     assert stray_configs(ROOT) == []
+
+
+def test_source_rule_sees_python_files_anywhere_in_the_repository(tmp_path: Path) -> None:
+    # Regression (audit M9, 01/11): a .py at the root or in a new folder escaped SPDX and size.
+    for relative in ("loose.py", "tools/make.py", ".venv/lib.py", "notes/private.py"):
+        (tmp_path / relative).parent.mkdir(parents=True, exist_ok=True)
+        _ = (tmp_path / relative).write_text("", encoding="utf-8")
+    found = [path.relative_to(tmp_path).as_posix() for path in source_paths(tmp_path)]
+    assert found == ["loose.py", "tools/make.py"]
+
+
+def test_attribute_rule_flags_pillow_imageops(tmp_path: Path) -> None:
+    source = "from PIL import ImageOps\n\nbig = ImageOps.scale(picture, 4)\n"
+    package_dir = make_package(tmp_path, {"io/png.py": source})
+    assert len(attribute_violations(python_files(package_dir))) == 2
+
+
+def test_io_rule_flags_disk_and_dynamic_import_outside_io(tmp_path: Path) -> None:
+    source = (
+        "import importlib\n\n"
+        "text = open('a').read()\n"
+        "_ = path.write_text(text)\n"
+        "module = importlib.import_module('x')\n"
+        "other = __import__('y')\n"
+    )
+    package_dir = make_package(tmp_path, {"pixel/x.py": source, "io/y.py": source})
+    found = io_only_violations(package_dir)
+    assert len(found) == 4
+    assert all("pixel/x.py" in line for line in found)
+
+
+def test_only_io_touches_disk_or_imports_by_name() -> None:
+    assert io_only_violations(PACKAGE_DIR) == []
+
+
+def test_name_rule_flags_attributes_aliases_and_caught_errors(tmp_path: Path) -> None:
+    # Regression (audit M9, 01/11): these three forms of naming escaped the rule.
+    source = (
+        "import json as data\n\n"
+        "class Box:\n"
+        "    def __init__(self) -> None:\n"
+        "        self.info = 1\n\n"
+        "try:\n    pass\nexcept ValueError as obj:\n    pass\n"
+    )
+    package_dir = make_package(tmp_path, {"grid/box.py": source})
+    assert len(name_violations(python_files(package_dir))) == 3
+
+
+def test_io_rule_flags_the_other_common_ways_to_touch_disk(tmp_path: Path) -> None:
+    # Regression (review of M9, 01/11): these forms escaped the first list of names.
+    source = (
+        "from importlib import import_module\n\n"
+        "module = import_module('x')\n"
+        "handle = path.open('w')\n"
+        "path.touch()\n"
+        "os.remove(path)\n"
+        "shutil.rmtree(path)\n"
+        "np.save(path, array)\n"
+    )
+    package_dir = make_package(tmp_path, {"grid/x.py": source})
+    assert len(io_only_violations(package_dir)) == 6
