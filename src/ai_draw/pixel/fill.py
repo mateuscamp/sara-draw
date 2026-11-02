@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, NamedTuple, get_args
 
 from ai_draw.errors import SettingError
 from ai_draw.geometry.path import FillRule
+from ai_draw.grid.canvas import check_pixel_color
 from ai_draw.pixel.cleanup import bridge_gaps
 from ai_draw.pixel.line import contour_line
 
@@ -159,6 +160,7 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
     >>> canvas = Canvas(32, 32)
     >>> fill(canvas, ellipse(16, 16, 10, 6), (200, 40, 40, 255))
     """
+    _ = check_pixel_color(color)
     found = spans(path.contours(), rule, canvas.height)
     for span in found:
         canvas.span(span.x, span.y, span.length, color)

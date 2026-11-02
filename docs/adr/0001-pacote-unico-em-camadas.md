@@ -55,8 +55,13 @@ podem importar.
 
 | O que verifica | Mecanismo | Onde roda | Falha quando |
 |---|---|---|---|
-| tabela de importação, sem ciclo | `tests/architecture/test_imports.py` (AST) | pytest / CI | import fora da tabela |
+| tabela de importação, sem ciclo | `tests/architecture/test_architecture.py` (AST) | pytest / CI | import fora da tabela |
 | Pillow só em `io/` | mesmo teste | pytest / CI | `PIL` importado fora de `io/` |
-| alfa binário na saída pixel | teste na bancada | pytest | algum alfa entre 1 e 254 |
+| alfa binário na saída pixel | `grid.canvas.check_pixel_color`, chamado por `fill`, `line`, `stroke` e `fill_rounded_rect`; um teste por pintor em `tests/pixel/` | pytest / CI | cor com alfa entre 1 e 254 passa sem `ColorError` |
 
 Regra derivada no `AGENTS.md`: seção "Fronteiras".
+
+**Correção (01/11, auditoria M4):** a governança citava `test_imports.py` e um teste de alfa
+na bancada, que nunca existiram. O teste de fronteira sempre foi `test_architecture.py`, e o
+alfa binário passou a ser cobrado na entrada: a saída pixel recusa a cor de alfa parcial em
+vez de gravá-la.

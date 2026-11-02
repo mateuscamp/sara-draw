@@ -44,6 +44,21 @@ def check_color(color: Color) -> Color:
     return color
 
 
+def check_pixel_color(color: Color) -> Color:
+    """Return ``color`` if the pixel output may paint it: valid, and alpha 0 or 255.
+
+    Pixel art has no half-transparent pixel (ADR-0001); alpha 0 still erases.
+
+    >>> check_pixel_color((20, 20, 20, 255))
+    (20, 20, 20, 255)
+    """
+    alpha = check_color(color)[3]
+    if alpha not in {0, _MAX_CHANNEL}:
+        message = f"color={color!r}: alpha {alpha!r}, expected 0 or 255 in pixel output"
+        raise ColorError(message)
+    return color
+
+
 class Canvas:
     """A ``height x width x 4`` array of ``uint8``, rows first, wrapped with drawing calls."""
 

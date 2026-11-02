@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from ai_draw.errors import SettingError
+from ai_draw.grid.canvas import check_pixel_color
 from ai_draw.pixel.line import contour_line, contour_side, line
 
 if TYPE_CHECKING:
@@ -128,6 +129,7 @@ def stroke(canvas: Canvas, path: Path, color: Color, width: int) -> None:
     if width < 1 or not float(width).is_integer():
         message = f"width={width!r}, expected a whole number of pixels >= 1"
         raise SettingError(message)
+    _ = check_pixel_color(color)
     if width == 1:
         line(canvas, path, color)
         return

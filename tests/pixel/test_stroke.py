@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import pytest
 
+from ai_draw.errors import ColorError
 from ai_draw.geometry.path import Path, ellipse
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
@@ -63,3 +64,8 @@ def test_thick_circle_is_a_steady_symmetric_ring(width: int) -> None:
 def test_stroke_width_is_a_whole_number_of_pixels(width: float) -> None:
     with pytest.raises(ValueError, match="width"):
         stroke(Canvas(4, 4), Path().move_to(0, 0).line_to(3, 3), INK, width)  # pyright: ignore[reportArgumentType]  # motivo: the bad value is the point
+
+
+def test_stroke_refuses_a_half_transparent_color() -> None:
+    with pytest.raises(ColorError, match="alpha"):
+        stroke(Canvas(16, 16), ellipse(8, 8, 5), (20, 20, 20, 128), 3)

@@ -4,6 +4,7 @@ from typing import cast
 
 import pytest
 
+from ai_draw.errors import ColorError
 from ai_draw.geometry.path import Path, ellipse, polygon, rect
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
@@ -83,3 +84,9 @@ def test_a_thin_ring_drawn_as_two_contours_stays_in_one_piece() -> None:
     canvas = Canvas(30, 30)
     fill(canvas, ellipse(15, 15, 12).extend(ellipse(15, 15, 11.5)), INK, "evenodd")
     assert components(cells_of(canvas)) == 1
+
+
+def test_fill_refuses_a_half_transparent_color() -> None:
+    # Regression (audit M4, 01/11): pixel output is alpha 0 or 255, and 128 was written as is.
+    with pytest.raises(ColorError, match="alpha"):
+        fill(Canvas(8, 8), rect(1, 1, 4, 4), (20, 20, 20, 128))

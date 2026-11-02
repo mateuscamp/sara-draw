@@ -15,6 +15,8 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from ai_draw.grid.canvas import check_pixel_color
+
 if TYPE_CHECKING:
     from ai_draw.grid.canvas import Canvas, Color
 
@@ -50,6 +52,7 @@ def fill_rounded_rect(  # noqa: PLR0913  # motivo: position, size, radius and co
 
     A radius that does not fit is clipped to half the shorter side.
     """
+    _ = check_pixel_color(color)
     insets = _corner_insets(min(radius, width // 2, height // 2))
     for row in range(height):
         inset = _row_inset(row, height, insets)

@@ -18,6 +18,7 @@ import math
 from typing import TYPE_CHECKING
 
 from ai_draw.geometry.path import Contour
+from ai_draw.grid.canvas import check_pixel_color
 from ai_draw.pixel.steps import even_out_steps
 
 if TYPE_CHECKING:
@@ -269,5 +270,6 @@ def line(canvas: Canvas, path: Path, color: Color) -> None:
     >>> canvas = Canvas(16, 16)
     >>> line(canvas, ellipse(8, 8, 6), (20, 20, 20, 255))
     """
+    _ = check_pixel_color(color)
     for x, y in sorted(line_cells(path)):
         canvas.paint(x, y, color)

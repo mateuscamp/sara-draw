@@ -3,6 +3,7 @@ import time
 
 import pytest
 
+from ai_draw.errors import ColorError
 from ai_draw.geometry.path import Path, ellipse, rect
 from ai_draw.geometry.transform import Transform
 from ai_draw.grid.canvas import Canvas, Color
@@ -102,3 +103,8 @@ def test_a_repeated_vertex_draws_the_same_line_as_a_single_one() -> None:
 
 def test_a_zero_length_line_paints_one_pixel() -> None:
     assert len(line_cells(Path().move_to(4, 4).line_to(4, 4))) == 1
+
+
+def test_line_refuses_a_half_transparent_color() -> None:
+    with pytest.raises(ColorError, match="alpha"):
+        line(Canvas(8, 8), Path().move_to(0.5, 0.5).line_to(6.5, 0.5), (20, 20, 20, 128))
