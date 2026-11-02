@@ -123,4 +123,5 @@ docs/adr/
 
 ## Ao terminar a implementação
 
-- Rode a skill `/code-audit` sobre o pacote inteiro (fase 9 do plano).
+- Rode a skill `/code-review` e, depois dela, a `/code-audit` sobre o pacote inteiro (fase 9
+  do plano).
