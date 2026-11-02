@@ -105,6 +105,8 @@ with 1 when it finds one, so it can guard a build.
 - Smooth coverage is exact for one contour. Contours that overlap or touch are summed per
   pixel, as FreeType does: two shapes touching with opposite directions leave a see-through
   seam where they meet. Draw them as one contour, or in the same direction.
+- A shape thinner than a pixel all along fills as the few pixel centers it covers, perhaps one
+  lone pixel; draw it as a one-pixel line instead (`ai_draw.pixel.line`).
 - The pixel output's time grows with the path's size, not the canvas's: a rectangle 400,000
   pixels wide filled on a 32x32 canvas takes seconds. Keep paths near the canvas.
 
