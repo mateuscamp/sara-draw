@@ -150,25 +150,45 @@ def _own_end(cells: list[Cell], index: int, contour: Contour) -> list[Cell]:
     return cells[:1] if index == len(contour.points) - 1 else cells
 
 
-def _offset(step: int, delta: int, steps: int) -> int:
-    """``step * delta / steps`` rounded, ties toward 0, in integers."""
+def _offset(step: int, delta: int, steps: int, toward: int = 0) -> int:
+    """``step * delta / steps`` rounded, ties toward 0, in integers.
+
+    The tie halfway along goes ``toward`` instead (+1 or -1), when that is given.
+    """
+    if toward and 2 * step == steps and delta % 2:
+        return (delta + toward) // 2
     magnitude = -((steps - 2 * step * abs(delta)) // (2 * steps))
     return magnitude if delta >= 0 else -magnitude
 
 
-def _between(start: Cell, end: Cell) -> list[Cell]:
+def _between(start: Cell, end: Cell, inside: Cell = (0, 0)) -> list[Cell]:
     """The cells after ``start`` up to ``end``, one step of the major axis at a time.
 
-    Always worked from the smaller cell, so a segment gives the same pixels both ways.
+    Always worked from the smaller cell, so a segment gives the same pixels both ways. The tie
+    halfway along goes to ``inside``, the side of the shape, when it has one.
     """
     if end < start:
-        return [*[*reversed(_between(end, start))][1:], end]
+        return [*[*reversed(_between(end, start, inside))][1:], end]
     dx, dy = end[0] - start[0], end[1] - start[1]
     steps = max(abs(dx), abs(dy))
     return [
-        (start[0] + _offset(step, dx, steps), start[1] + _offset(step, dy, steps))
+        (
+            start[0] + _offset(step, dx, steps, inside[0]),
+            start[1] + _offset(step, dy, steps, inside[1]),
+        )
         for step in range(1, steps + 1)
     ]
+
+
+def _inside(start: Cell, end: Cell, side: float) -> Cell:
+    """One step from the segment ``start`` to ``end`` toward the inside of its shape.
+
+    Mirror images of a shape run a segment from opposite ends, so a tie halfway along decided
+    from one end comes out lopsided (audit M2's rest); the inside is the same in both. The
+    inside is to the right on screen when ``side`` is 1.0 (``contour_side``).
+    """
+    across = (-(end[1] - start[1]) * side, (end[0] - start[0]) * side)
+    return (across[0] > 0) - (across[0] < 0), (across[1] > 0) - (across[1] < 0)
 
 
 def _turn_degrees(before: Point, at: Point, after: Point) -> float:
@@ -301,9 +321,12 @@ def contour_line(contour: Contour) -> list[Cell]:
     contour = _without_repeated_points(contour)
     cells = _cells_of_points(contour)
     flat = [cell for point_cells in cells for cell in point_cells]
+    # Only a shape with an inside settles its ties there; a line or a flat shape keeps toward 0.
+    shape = contour.closed and _area(contour.points) != 0
+    side = contour_side(contour) if shape else 0.0
     joined = [flat[0]]
     for cell in [*flat[1:], *flat[:1]] if contour.closed else flat[1:]:
-        joined.extend(_between(joined[-1], cell))
+        joined.extend(_between(joined[-1], cell, _inside(joined[-1], cell, side)))
     if contour.closed and len(joined) > 1:
         del joined[-1]
     clean = _drop_l_corners(joined, _corners(contour, cells), contour)

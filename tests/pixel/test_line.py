@@ -142,3 +142,35 @@ def test_a_flat_shape_on_a_pixel_edge_is_one_pixel_thick(
     # pixels, and each way took its own side of the edge: two rows, or a 2x2 block for a point.
     # Like the fill's half-open rows, it takes the pixel past the edge.
     assert line_cells(path) == expected
+
+
+@pytest.mark.parametrize(
+    ("rx", "ry"),
+    [
+        (2.5, 13.5),
+        (3.5, 21.5),
+        (4.0, 25.5),
+        (4.5, 25.5),
+        (6.0, 30.0),
+        (12.0, 29.5),
+        (15.5, 6.5),
+        (18.0, 4.5),
+        (25.0, 7.5),
+        (27.0, 5.0),
+        (28.5, 6.5),
+    ],
+)
+def test_ellipses_are_mirror_images(rx: float, ry: float) -> None:
+    # Regression (audit M2's rest, 02/11): 184 of 3,481 ellipses of a sweep came out lopsided.
+    # A segment's middle tie was decided from its smaller cell, which mirror images have at
+    # opposite ends.
+    cells = frozenset(line_cells(ellipse(40, 40, rx, ry)))
+    assert asymmetric_cells(cells, mirror_x=40, mirror_y=40) == 0
+
+
+@pytest.mark.parametrize(("radius", "center"), [(186, 189), (200, 203.5), (214, 217.5)])
+def test_large_circles_are_mirror_images(radius: int, center: float) -> None:
+    # Regression (02/11): from radius about 180, 28 circles of a sweep came out lopsided, by the
+    # same middle tie as the ellipses.
+    cells = frozenset(line_cells(ellipse(center, center, radius)))
+    assert asymmetric_cells(cells, mirror_x=center, mirror_y=center) == 0
