@@ -47,7 +47,8 @@ Quantum: inalterado, um pacote.
 | import-linter | teste de AST em `tests/architecture` (ADR-0001) | já existia, cobre também terceiros por camada e ciclos, e mostra cada regra pegando violação plantada | uma ferramenta pronta e conhecida |
 | config lida num módulo só | não há config | biblioteca sem variável de ambiente | — |
 
-5. **Hypothesis**: decisão adiada para depois do `/code-audit` (fase 9). Candidatos a teste
+5. **Hypothesis**: decidido no ADR-0006 (02/11). Antes: decisão adiada para depois do
+   `/code-audit` (fase 9). Candidatos a teste
    por propriedade: a cobertura suave soma a área do polígono; a linha de 1 px de qualquer
    curva é conexa e sem L; `Transform.then` é associativa; o PNG faz ida e volta.
 
