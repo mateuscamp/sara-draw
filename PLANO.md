@@ -336,11 +336,19 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   de um trecho, decidido a partir da célula menor. Agora ele vai para o lado de dentro da forma,
   que o espelho preserva. Numa varredura de 3.481 elipses, as assimétricas caíram de 184 para
   2 (`ellipse(40, 40, 1, 1.5)` e a transposta, de 1 px de raio), e dos círculos de raio 60 a 255,
-  de 28 para 0. A bancada e a galeria não mudaram. O wobble dos círculos a partir do raio 40
-  continua.
+  de 28 para 0. A bancada e a galeria não mudaram.
+- Wobble dos círculos de 1 px (02/11): eram 190 de 236 círculos (raio 3 a 120) e 582 de 3.481
+  elipses, a partir do raio 19, com degraus como 2, 2, 1, 1, 2, 1, 1. A ordem dos degraus só
+  trocava um degrau com o vizinho e ignorava o que fica entre dois iguais, porque numa reta
+  esse vaivém é o ritmo (2, 3, 2, 3). Uma reta digital tem no máximo dois tamanhos de degrau;
+  um bloco com três ou mais, entre diagonais iguais, é curva e agora é ordenado de uma vez. Os
+  lados retos de um polígono (trechos de 3 células ou mais) ficam de fora: sem isso, do
+  heptágono em diante os lados perdiam o ritmo e o polígono arredondava. Ficou 0 de 236 e 0 de
+  3.481, sem L, quebra ou assimetria nova; polígonos de 5 a 16 lados e quadrados girados iguais
+  pixel a pixel; bancada e galeria iguais.
 
 ## Próximo passo
 
 Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo. Pendente,
 registrado no README em "Limits": círculos grandes de 1 px leem octogonais e nenhum detector
-mede redondeza; o wobble deles a partir do raio 40; e o ADR do Hypothesis, adiado.
+mede redondeza; e o ADR do Hypothesis, adiado.
