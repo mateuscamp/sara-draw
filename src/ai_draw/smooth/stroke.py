@@ -134,8 +134,8 @@ def _contour_outline(contour: Contour, half: float) -> list[list[Point]]:
 
 def stroke_outline(path: Path, width: float) -> Path:
     """The outline of ``path`` stroked ``width`` pixels wide, round caps and joins."""
-    if width <= 0:
-        message = f"width={width!r}, expected a positive number of pixels"
+    if not math.isfinite(width) or width <= 0:
+        message = f"width={width!r}, expected a positive finite number of pixels"
         raise SettingError(message)
     outline = Path()
     for contour in path.contours(segments_per_pixel=SEGMENTS_PER_PIXEL):

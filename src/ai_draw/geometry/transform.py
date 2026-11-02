@@ -18,6 +18,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from ai_draw.errors import GeometryError
+
 # Exact (sin, cos) for each quarter turn: math.cos(math.pi / 2) is 6e-17, and a square
 # turned 90 degrees would come out with an edge half a pixel off, depending on rounding.
 _QUARTER_TURNS: tuple[tuple[float, float], ...] = ((0.0, 1.0), (1.0, 0.0), (0.0, -1.0), (-1.0, 0.0))
@@ -42,6 +44,13 @@ class Transform:
     d: float = 1.0
     e: float = 0.0
     f: float = 0.0
+
+    def __post_init__(self) -> None:
+        """Refuse NaN and inf, which would turn every transformed point into one."""
+        values = (self.a, self.b, self.c, self.d, self.e, self.f)
+        if not all(math.isfinite(value) for value in values):
+            message = f"transform={values!r}, expected six finite numbers"
+            raise GeometryError(message)
 
     @staticmethod
     def identity() -> Transform:

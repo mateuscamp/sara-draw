@@ -130,9 +130,10 @@ def stroke(canvas: Canvas, path: Path, color: Color, width: int) -> None:
         message = f"width={width!r}, expected a whole number of pixels >= 1"
         raise SettingError(message)
     _ = check_pixel_color(color)
-    if width == 1:
+    whole = int(width)  # 2.0 from an untyped caller would break range() in the brush
+    if whole == 1:
         line(canvas, path, color)
         return
-    painted = {cell for contour in path.contours() for cell in contour_stroke(contour, width)}
+    painted = {cell for contour in path.contours() for cell in contour_stroke(contour, whole)}
     for x, y in sorted(painted):
         canvas.paint(x, y, color)

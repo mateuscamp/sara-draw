@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import math
 from collections.abc import Callable
 
 import pytest
 
+from ai_draw.errors import GeometryError
 from ai_draw.geometry.path import Contour, Path, ellipse, polygon, rect
 from ai_draw.geometry.transform import Transform
 
@@ -97,3 +99,11 @@ def test_transformed_moves_every_point_and_keeps_the_original() -> None:
 def test_finer_flattening_multiplies_the_segments() -> None:
     (contour,) = Path().move_to(0, 0).quad_to(5, 0, 10, 0).contours(segments_per_pixel=4)
     assert len(contour.points) == 41
+
+
+@pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf])
+def test_a_point_that_is_not_a_finite_number_is_refused(bad: float) -> None:
+    # Regression (audit M5, 01/11): NaN and inf reached the rasterizer and failed there with
+    # a plain ValueError or OverflowError, outside the library's error family.
+    with pytest.raises(GeometryError, match="finite"):
+        _ = Path().move_to(0, 0).line_to(bad, 1)

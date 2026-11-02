@@ -3,6 +3,7 @@ import math
 
 import pytest
 
+from ai_draw.errors import SettingError
 from ai_draw.geometry.path import Path, Point, ellipse
 from ai_draw.smooth.coverage import coverage
 from ai_draw.smooth.stroke import stroke_outline
@@ -75,3 +76,9 @@ def test_stroke_outline_matches_freetype_within_one_step() -> None:
 def test_stroke_width_must_be_positive(width: float) -> None:
     with pytest.raises(ValueError, match="width"):
         _ = stroke_outline(Path().move_to(0, 0).line_to(4, 0), width)
+
+
+@pytest.mark.parametrize("width", [math.nan, math.inf])
+def test_a_width_that_is_not_finite_is_refused(width: float) -> None:
+    with pytest.raises(SettingError, match="width"):
+        _ = stroke_outline(Path().move_to(1, 1).line_to(8, 1), width)

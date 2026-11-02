@@ -59,6 +59,18 @@ class Command:
     points: tuple[Point, ...]
 
 
+def _finite(points: tuple[Point, ...]) -> tuple[Point, ...]:
+    """Return ``points`` if every coordinate is a finite number.
+
+    NaN or inf would only fail later, deep in the rasterizer, outside ``DrawingError``.
+    """
+    for point in points:
+        if not all(math.isfinite(value) for value in point):
+            message = f"point={point!r}, expected finite coordinates"
+            raise GeometryError(message)
+    return points
+
+
 class Path:
     """A builder of subpaths; every drawing method returns the path, so calls chain."""
 
@@ -72,7 +84,7 @@ class Path:
             if last is None or last.kind == "close":
                 message = f"{kind} without a starting point: begin the subpath with move_to(x, y)"
                 raise GeometryError(message)
-        self._commands.append(Command(kind, points))
+        self._commands.append(Command(kind, _finite(points)))
         return self
 
     def move_to(self, x: float, y: float) -> Self:
@@ -109,7 +121,7 @@ class Path:
         """A copy with every point passed through ``transform``."""
         copy = Path()
         copy._commands = [
-            Command(command.kind, tuple(transform.apply(x, y) for x, y in command.points))
+            Command(command.kind, _finite(tuple(transform.apply(x, y) for x, y in command.points)))
             for command in self._commands
         ]
         return copy

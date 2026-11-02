@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import math
+from collections.abc import Callable
 
 import pytest
 
+from ai_draw.errors import GeometryError
 from ai_draw.geometry.transform import Transform
 
 
@@ -39,3 +41,16 @@ def test_rotate_45_lands_on_the_diagonal() -> None:
 def test_then_applies_self_first() -> None:
     turn_then_move = Transform.rotate(90).then(Transform.translate(32, 32))
     assert turn_then_move.apply(1, 0) == (32, 33)
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda: Transform.rotate(math.nan),
+        lambda: Transform.scale(math.inf),
+        lambda: Transform.translate(0, math.nan),
+    ],
+)
+def test_a_transform_that_is_not_finite_is_refused(build: Callable[[], Transform]) -> None:
+    with pytest.raises(GeometryError, match="finite"):
+        _ = build()

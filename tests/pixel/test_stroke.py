@@ -69,3 +69,11 @@ def test_stroke_width_is_a_whole_number_of_pixels(width: float) -> None:
 def test_stroke_refuses_a_half_transparent_color() -> None:
     with pytest.raises(ColorError, match="alpha"):
         stroke(Canvas(16, 16), ellipse(8, 8, 5), (20, 20, 20, 128), 3)
+
+
+def test_a_whole_width_written_as_a_float_strokes_like_the_integer() -> None:
+    # Regression (audit M5, 01/11): width 2.0 raised TypeError from range().
+    as_int, as_float = Canvas(16, 16), Canvas(16, 16)
+    stroke(as_int, ellipse(8, 8, 5), INK, 2)
+    stroke(as_float, ellipse(8, 8, 5), INK, 2.0)  # pyright: ignore[reportArgumentType]  # motivo: untyped callers pass floats
+    assert to_rows(as_float, LEGEND) == to_rows(as_int, LEGEND)
