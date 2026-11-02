@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import time
+
 import pytest
 
 from ai_draw.errors import SettingError
@@ -125,3 +127,13 @@ def test_wobble_refuses_a_width_below_one(width: int) -> None:
     # Regression (audit B8, 02/11): wobble answered 0 where thickness_defects refuses the width.
     with pytest.raises(SettingError, match="expected an integer >= 1"):
         _ = wobble(cells("##"), width)
+
+
+def test_components_of_many_loose_pixels_take_linear_time() -> None:
+    # Regression (audit B4, 02/11): each new piece recounted the labels, 5.8 s for 40,000.
+    loose = frozenset((2 * x, 2 * y) for x in range(200) for y in range(200))
+    start = time.perf_counter()
+    count = components(loose)
+    elapsed = time.perf_counter() - start
+    assert count == 40_000
+    assert elapsed < 0.5

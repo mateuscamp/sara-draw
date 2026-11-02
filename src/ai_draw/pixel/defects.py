@@ -52,10 +52,12 @@ def orphans(cells: Cells) -> int:
 def component_labels(cells: Cells) -> dict[Cell, int]:
     """Number each piece, joined by any of the eight neighbors, from the top-left one."""
     labels: dict[Cell, int] = {}
+    # Counted as they start: recounting the labels for each piece was quadratic (audit B4).
+    pieces = itertools.count()
     for start in sorted(cells, key=lambda cell: (cell[1], cell[0])):
         if start in labels:
             continue
-        piece = len(set(labels.values()))
+        piece = next(pieces)
         labels[start] = piece
         frontier = [start]
         while frontier:
