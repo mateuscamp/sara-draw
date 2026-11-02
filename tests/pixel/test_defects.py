@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import pytest
 
+from ai_draw.errors import SettingError
 from ai_draw.grid.canvas import Color
 from ai_draw.grid.rows import from_rows
 from ai_draw.pixel.defects import (
@@ -117,3 +118,10 @@ def test_a_steady_stroke_does_not_wobble() -> None:
 
 def test_a_stroke_whose_width_swings_back_and_forth_wobbles() -> None:
     assert wobble(cells("###...", ".##...", ".###..", "..##..", "..###."), 2) == 3
+
+
+@pytest.mark.parametrize("width", [0, -5])
+def test_wobble_refuses_a_width_below_one(width: int) -> None:
+    # Regression (audit B8, 02/11): wobble answered 0 where thickness_defects refuses the width.
+    with pytest.raises(SettingError, match="expected an integer >= 1"):
+        _ = wobble(cells("##"), width)

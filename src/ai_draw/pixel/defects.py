@@ -224,6 +224,9 @@ def wobble(cells: Cells, width: int) -> int:
     ``width + 1``, followed from line to line. A width that changes and stays, as a curve
     turns, does not count; one that flips 3, 2, 3 is the stroke that swells and thins.
     """
+    if width < 1:
+        message = f"width={width!r}, expected an integer >= 1"
+        raise SettingError(message)
     total = 0
     for by_rows in (True, False):
         for chain in _chains(_across_runs(cells, by_rows=by_rows, longest=width + 1)):
