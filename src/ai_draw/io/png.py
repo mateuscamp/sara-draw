@@ -26,7 +26,18 @@ def write_png(canvas: Canvas, path: Path) -> None:
     Image.fromarray(canvas.pixels).save(path, format="PNG")
 
 
+# Pillow opens 16-bit gray in these modes and clips it to 255 on the way to RGBA (audit B2).
+_WIDE_GRAY = frozenset({"I", "I;16", "I;16B", "I;16L"})
+
+
 def read_png(path: Path) -> Canvas:
     """Load the image at ``path`` as a canvas; any mode is converted to RGBA."""
     with Image.open(path) as image:
-        return Canvas.from_pixels(np.asarray(image.convert("RGBA"), dtype=np.uint8))
+        if image.mode in _WIDE_GRAY:
+            # Keep the high byte, as Pillow does for 16-bit color.
+            return _canvas_of(image.convert("I").point(lambda value: value / 256).convert("L"))
+        return _canvas_of(image)
+
+
+def _canvas_of(image: Image.Image) -> Canvas:
+    return Canvas.from_pixels(np.asarray(image.convert("RGBA"), dtype=np.uint8))
