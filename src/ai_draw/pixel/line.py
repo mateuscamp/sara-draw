@@ -22,7 +22,7 @@ from ai_draw.grid.canvas import check_pixel_color
 from ai_draw.pixel.steps import even_out_steps
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from ai_draw.geometry.path import Path, Point
     from ai_draw.grid.canvas import Canvas, Color
@@ -206,6 +206,31 @@ def _l_corner_indexes(cells: list[Cell], kept_corners: set[Cell], *, closed: boo
     ]
 
 
+def _tip_twin(
+    cells: list[Cell],
+    corners: list[int],
+    worst: int,
+    key: Callable[[int], tuple[float, bool, Cell]],
+) -> list[int]:
+    """The other half of a two-pixel tip, when ``worst`` is one half and ties with it.
+
+    A narrow shape turns back over two pixels side by side; each is the middle of an L and
+    they lie at the same distance from the path, so dropping only one leaves the tip lopsided
+    (audit M2). Dropping both keeps it mirrored and still joined: the pixels before and after
+    the tip touch by a side, which only a turn back guarantees.
+    """
+    count = len(cells)
+    for first in ((worst - 1) % count, worst):
+        second = (first + 1) % count
+        twin = second if first == worst else first
+        if twin not in corners or key(twin)[:2] != key(worst)[:2]:
+            continue
+        before, after = cells[first - 1], cells[(second + 1) % count]
+        if abs(before[0] - after[0]) + abs(before[1] - after[1]) == 1:
+            return [twin]
+    return []
+
+
 def _drop_l_corners(cells: list[Cell], kept_corners: set[Cell], contour: Contour) -> list[Cell]:
     """Drop the middle pixel of every L, the one farthest from the path first.
 
@@ -224,7 +249,9 @@ def _drop_l_corners(cells: list[Cell], kept_corners: set[Cell], contour: Contour
 
     result = list(cells)
     while corners := _l_corner_indexes(result, kept_corners, closed=contour.closed):
-        del result[max(corners, key=worst_first)]
+        worst = max(corners, key=worst_first)
+        for index in sorted({worst, *_tip_twin(result, corners, worst, worst_first)}, reverse=True):
+            del result[index]
     return result
 
 

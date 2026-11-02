@@ -108,3 +108,17 @@ def test_a_zero_length_line_paints_one_pixel() -> None:
 def test_line_refuses_a_half_transparent_color() -> None:
     with pytest.raises(ColorError, match="alpha"):
         line(Canvas(8, 8), Path().move_to(0.5, 0.5).line_to(6.5, 0.5), (20, 20, 20, 128))
+
+
+@pytest.mark.parametrize("rx", [1.0, 1.5, 2.0, 2.5])
+def test_narrow_ellipses_end_in_a_clean_tip(rx: float) -> None:
+    # Regression (audit M2, 01/11): the two-pixel tip lost only one of its halves, which left
+    # an L and a lopsided tip in 76 of 2,418 ellipses of a sweep.
+    for ry in [step / 2 for step in range(2, 41)]:
+        cells = frozenset(line_cells(ellipse(40, 40, rx, ry)))
+        assert l_corners(cells) == 0, f"ellipse(40, 40, {rx}, {ry})"
+
+
+def test_a_narrow_ellipse_tip_stays_mirrored() -> None:
+    cells = frozenset(line_cells(ellipse(40, 40, 2, 8.5)))
+    assert asymmetric_cells(cells, mirror_x=40, mirror_y=40) == 0
