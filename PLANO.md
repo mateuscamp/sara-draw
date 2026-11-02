@@ -361,6 +361,13 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   Entraram as quatro propriedades que passam hoje (ida e volta do PNG, `then` associativa, área
   da cobertura suave, linha aberta igual nos dois sentidos fora das divisas), cada uma vista
   falhar com o defeito plantado, e o teste que confere o perfil.
+- Wobble das elipses (02/11): a propriedade de elipse com centro e raios quaisquer mostrou que
+  146 das 160 elipses com wobble da amostra vinham da suavização da redondeza (f304482): o
+  lado longo de uma elipse estreita passava um passo para a perna ao lado da ponta, e o topo
+  lia 2, 1, 2. As varreduras em grade, com centro inteiro, não viam. A suavização agora recusa
+  a troca que cria um a, b, a de corridas curtas. Amostra de 3.000: wobble de 160 para 14 (as
+  14 já existiam antes da suavização, que ainda corrige outras 56); elipses da grade com degrau
+  brusco de 556 para 588, o preço de não engordar o traço; círculos, bancada e galeria iguais.
 
 ## Próximo passo
 
@@ -368,7 +375,11 @@ Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com mot
 
 Pendente, achado pelo Hypothesis no protótipo do ADR-0006, cada um com a sua propriedade
 como vermelho e o contraexemplo como `@example`:
-- elipse com raios fora da grade de meios: wobble em 160 de 3.000 (5%), 3 assimétricas e 1 com
-  L (`ellipse(30, 30, 1.5, 10.026991306811004)` sai com 2 cantos em L);
+- elipse: 14 de 3.000 com wobble, todas anteriores à suavização, como a ponta de uma elipse
+  estreita centrada num pixel (`ellipse(30.5, 30.5, 2, 6)`: as pernas terminam numa divisa, e
+  a regra da divisa escolhe o pixel de dentro); 3 assimétricas e 1 com L
+  (`ellipse(30, 30, 1.5, 10.026991306811004)`). Tentado e descartado: as pernas passarem um
+  passo para o lado da forma, que brigava com a suavização (laço) e piorava a bancada e o traço
+  de 2 px;
 - triângulo fino preenchido: 106 de 3.000 em pedaços e 75 com pixel solto (a lasca
   `(3, 30.875), (4, 31), (12, 23)`), contra o "thin parts kept joined" do README.
