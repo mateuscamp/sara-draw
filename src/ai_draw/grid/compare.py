@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from ai_draw.errors import CanvasError
 from ai_draw.grid.arrays import color_mask, count_differing
+from ai_draw.grid.canvas import check_color
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -35,6 +36,8 @@ def recolor(canvas: Canvas, mapping: Mapping[Color, Color]) -> Canvas:
 
     Every swap reads the original, so ``{a: b, b: a}`` exchanges the two colors.
     """
+    for old, new in mapping.items():
+        _ = check_color(old), check_color(new)
     result = canvas.copy()
     for old, new in mapping.items():
         result.pixels[color_mask(canvas.pixels, old)] = new

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import pytest
 
+from ai_draw.errors import ColorError
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.compare import diff, recolor
 from ai_draw.grid.rows import from_rows, to_rows
@@ -28,3 +29,9 @@ def test_recolor_swaps_only_the_mapped_colors_into_a_new_canvas() -> None:
     original = from_rows(["rb."], LEGEND)
     assert to_rows(recolor(original, {RED: BLUE}), LEGEND) == ["bb."]
     assert to_rows(original, LEGEND) == ["rb."]
+
+
+def test_recolor_refuses_a_new_color_that_is_not_a_color() -> None:
+    # Regression (audit B3, 02/11): numpy raised OverflowError for a channel of 999.
+    with pytest.raises(ColorError, match="expected"):
+        _ = recolor(from_rows(["r"], LEGEND), {RED: (999, 0, 0, 255)})

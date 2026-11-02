@@ -1,5 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
-from ai_draw.grid.canvas import Color
+from collections.abc import Callable
+
+import pytest
+
+from ai_draw.errors import ColorError
+from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.outline import outline, outlined
 from ai_draw.grid.rows import from_rows, to_rows
 
@@ -37,3 +42,12 @@ def test_outlined_grows_a_pixel_and_rings_the_silhouette_by_eight_neighbors() ->
 def test_outlined_fills_a_gap_between_two_shapes() -> None:
     expected = ["kkkkk", "ksksk", "kkkkk"]
     assert to_rows(outlined(from_rows(["s.s"], LEGEND), INK), LEGEND) == expected
+
+
+@pytest.mark.parametrize("draw", [outline, outlined])
+def test_outline_refuses_an_ink_that_is_not_a_color(
+    draw: Callable[[Canvas, Color], Canvas],
+) -> None:
+    # Regression (audit B3, 02/11): a bad ink leaked numpy's OverflowError or ValueError.
+    with pytest.raises(ColorError, match="expected"):
+        _ = draw(from_rows(["s"], LEGEND), (300, 0, 0, 255))

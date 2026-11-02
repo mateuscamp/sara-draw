@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ai_draw.grid.arrays import edge_mask, halo_mask, opaque_mask
-from ai_draw.grid.canvas import Canvas
+from ai_draw.grid.canvas import Canvas, check_color
 
 if TYPE_CHECKING:
     from ai_draw.grid.canvas import Color
@@ -27,6 +27,7 @@ def outline(canvas: Canvas, ink: Color) -> Canvas:
     A border pixel is opaque and touches transparency, or the canvas edge, by one of its four
     sides. The outline sits inside the silhouette, so the size does not change.
     """
+    _ = check_color(ink)
     result = canvas.copy()
     result.pixels[edge_mask(opaque_mask(canvas.pixels))] = ink
     return result
@@ -38,6 +39,7 @@ def outlined(canvas: Canvas, ink: Color) -> Canvas:
     Every transparent pixel with an opaque one among its eight neighbors becomes ink, so the
     outline sits outside the silhouette and keeps every pixel of the drawing.
     """
+    _ = check_color(ink)
     result = Canvas(canvas.width + 2, canvas.height + 2)
     result.pixels[1:-1, 1:-1] = canvas.pixels
     result.pixels[halo_mask(opaque_mask(canvas.pixels))] = ink
