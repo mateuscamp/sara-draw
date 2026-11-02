@@ -8,7 +8,14 @@ from ai_draw.geometry.path import Path, ellipse, polygon, rect
 from ai_draw.geometry.transform import Transform
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
-from ai_draw.pixel.defects import asymmetric_cells, components, l_corners, orphans, wobble
+from ai_draw.pixel.defects import (
+    abrupt_steps,
+    asymmetric_cells,
+    components,
+    l_corners,
+    orphans,
+    wobble,
+)
 from ai_draw.pixel.line import line, line_cells
 
 INK: Color = (20, 20, 20, 255)
@@ -183,3 +190,13 @@ def test_larger_circles_have_steps_that_only_grow_or_shrink(radius: int) -> None
     for center in (radius + 3, radius + 3.5):
         cells = frozenset(line_cells(ellipse(center, center, radius)))
         assert wobble(cells, 1) == 0, f"center {center}"
+
+
+@pytest.mark.parametrize("radius", [8, 12, 20, 40, 60, 100])
+def test_circles_have_no_abrupt_step(radius: int) -> None:
+    # Regression (02/11): a large circle read as an octagon, a flat top of 9 and then 3 at once
+    # at radius 40. The top now passes cells to the runs after it while one is over twice the
+    # other.
+    for center in (radius + 3, radius + 3.5):
+        cells = frozenset(line_cells(ellipse(center, center, radius)))
+        assert abrupt_steps(cells) == 0, f"center {center}"

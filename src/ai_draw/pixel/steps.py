@@ -24,6 +24,8 @@ Cell = tuple[int, int]
 Step = tuple[int, int]
 
 _NO_CELLS: frozenset[Cell] = frozenset()
+# The shortest run that may be over twice its neighbor; 2 against 1 is how a curve leaves a row.
+_ABRUPT_FROM = 3
 
 
 def _steps(cells: list[Cell], *, closed: bool) -> list[Step]:
@@ -208,6 +210,87 @@ def _held_runs(cells: list[Cell], steps: list[Step], straight: AbstractSet[Cell]
     return held
 
 
+def _cells_along(run: list[Step], axis: int) -> int | None:
+    """The cells ``run`` lays along ``axis`` (0 a row, 1 a column); None if it runs across."""
+    if any(step[1 - axis] for step in run):
+        return None
+    return len(run) + 1
+
+
+def _reach(stretch: _Stretch, index: int, axis: int) -> float | None:
+    """A run's length as the eye reads it: half of it on top of a round shape.
+
+    The top is the run whose diagonals turn back across ``axis``: both sides share it.
+    """
+    length = _cells_along(stretch.runs[index], axis)
+    before = stretch.diagonal_before(index)
+    after = stretch.diagonals[index] if index < len(stretch.diagonals) else None
+    if length is None or before is None or after is None:
+        return None
+    if before == after:
+        return length
+    turns_back = before[axis] == after[axis] and before[1 - axis] != after[1 - axis]
+    return length / 2 if turns_back else None
+
+
+def _gentler(stretch: _Stretch, index: int, held: list[bool]) -> list[tuple[int, int, Step]]:
+    """The step that run ``index`` and the next should trade, if one is over twice the other.
+
+    It goes from the longer to the shorter, along the axis both lie on: (giver, taker, step).
+    """
+    after = (index + 1) % len(stretch.runs) if stretch.closed else index + 1
+    if after >= len(stretch.runs) or index >= len(stretch.diagonals) or held[index] or held[after]:
+        return []
+    diagonal = stretch.diagonals[index]
+    for axis in (0, 1):
+        first, second = _reach(stretch, index, axis), _reach(stretch, after, axis)
+        if first is None or second is None:
+            continue
+        longer, shorter = max(first, second), min(first, second)
+        if longer > 2 * shorter and longer >= _ABRUPT_FROM:
+            step = (diagonal[0], 0) if axis == 0 else (0, diagonal[1])
+            giver, taker = (index, after) if first > second else (after, index)
+            return [(giver, taker, step)]
+    return []
+
+
+def _unmixed(stretch: _Stretch, trades: list[tuple[int, int, Step]]) -> list[tuple[int, int, Step]]:
+    """The trades that leave every run going one way.
+
+    Between two tops, a one-cell run is wanted by both, across and down: it would become a
+    corner. Every trade it takes part in is dropped, and the corner of the shape stays as it is.
+    """
+    ways: dict[int, set[Step]] = {}
+    for giver, taker, step in trades:
+        ways.setdefault(taker, set(stretch.runs[taker])).add(step)
+        _ = ways.setdefault(giver, set(stretch.runs[giver]))
+    mixed = {index for index, steps in ways.items() if len(steps) > 1}
+    return [trade for trade in trades if not mixed & {trade[0], trade[1]}]
+
+
+def _soften(stretch: _Stretch, held: list[bool]) -> Step:
+    """Pass a step from a run to its neighbor while one is over twice the other.
+
+    The flat top of a large circle reads as an octagon when the next run is a third of it
+    (``abrupt_steps``); a pixel artist shortens the top and lengthens the runs after it. Every
+    pass decides its trades before making any, so both sides of a top give at once and a
+    mirrored shape stays mirrored. A trade always goes from longer to shorter, so it ends.
+
+    Returns how far the first cell moves: a closed line is rebuilt from the start of its first
+    run, and a trade across that seam carries the start with it.
+    """
+    start = (0, 0)
+    while trades := _unmixed(
+        stretch, [t for i in range(len(stretch.runs)) for t in _gentler(stretch, i, held)]
+    ):
+        for giver, taker, step in trades:
+            stretch.runs[giver].remove(step)
+            stretch.runs[taker].append(step)
+            sign = (giver == 0 and taker != 1) - (taker == 0 and giver != 1)
+            start = (start[0] + sign * step[0], start[1] + sign * step[1])
+    return start
+
+
 def _rebuild(start: Cell, stretch: _Stretch) -> list[Cell]:
     cells = [start]
     for index, run in enumerate(stretch.runs):
@@ -235,9 +318,11 @@ def even_out_steps(
     runs, diagonals = _split(steps[shift:] + steps[:shift])
     stretch = _Stretch(runs[:-1] if closed else runs, diagonals, closed=closed)
     rotated = cells[shift:] + cells[:shift]
-    _sort_curves(stretch, _held_runs(rotated, steps[shift:] + steps[:shift], straight))
+    held = _held_runs(rotated, steps[shift:] + steps[:shift], straight)
+    _sort_curves(stretch, held)
     _settle(stretch)
-    rebuilt = _rebuild(cells[shift], stretch)
+    moved = _soften(stretch, held)
+    rebuilt = _rebuild((cells[shift][0] + moved[0], cells[shift][1] + moved[1]), stretch)
     if not closed:
         return rebuilt
     del rebuilt[-1]

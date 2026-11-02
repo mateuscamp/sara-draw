@@ -5,7 +5,7 @@
     "orphans": 0
   },
   "circle_stroke_1px_r20_to_r100": {
-    "abrupt_steps": 64,
+    "abrupt_steps": 0,
     "asymmetry": 0,
     "extra_components": 0,
     "l_corners": 0,
@@ -14,7 +14,7 @@
     "wobble": 0
   },
   "circle_stroke_1px_r3_to_r16": {
-    "abrupt_steps": 96,
+    "abrupt_steps": 16,
     "asymmetry": 0,
     "extra_components": 0,
     "l_corners": 0,

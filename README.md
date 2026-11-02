@@ -97,9 +97,9 @@ with 1 when it finds one, so it can guard a build.
 
 - Below about 20 pixels no rule replaces choosing pixel by pixel; draw that detail as a
   character map, as in [`examples/pixel/potion.py`](examples/pixel/potion.py).
-- Large one-pixel circles read slightly octagonal: the step from the flat top to the first
-  diagonal is abrupt. No detector measures roundness yet. `skimage.draw`'s Bresenham circle
-  reads rounder, with the L corners and wobble counted above.
+- Very narrow ellipses, and circles of radius 4 and 5 centered on a pixel corner, keep a run
+  more than twice the next (`ai_draw.pixel.defects.abrupt_steps`): their corners have a
+  single pixel between two runs, and passing cells into it would make an L corner.
 - A smooth stroke's inner corner is exact while the overlap of the two legs fits on them; a
   sharp turn between legs shorter than that is approximated through the vertex.
 - Smooth coverage is exact for one contour. Contours that overlap or touch are summed per
