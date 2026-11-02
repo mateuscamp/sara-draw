@@ -103,16 +103,33 @@ def _axis_cells(value: float, inward: float, forward: float, touch: int = 0) -> 
     return [edge - 1, edge] if forward >= 0 else [edge, edge - 1]
 
 
+def _inward(value: float, *, flat: bool, turning: bool) -> float:
+    """Which side of a pixel edge the point goes to: ``value``, unless the contour is flat.
+
+    A closed contour of zero area has no inside and runs both ways over the same pixels, so its
+    direction must not choose (audit B5): it takes the pixel past the edge, as the fill's
+    half-open rows do, also where it turns back with a zero tangent. An open line keeps the side
+    of its direction, which a wider stroke pairs its extra pixel with (audit B6, kept).
+    """
+    if not flat:
+        return value
+    return 1.0 if turning else abs(value)
+
+
 def _cells_of_points(contour: Contour) -> list[list[Cell]]:
     """Per point, its pixels: one, or two on the tip of a symmetric shape."""
     points = contour.points
     side = contour_side(contour)
+    flat = contour.closed and _area(points) == 0
     cells: list[list[Cell]] = []
     for index, (x, y) in enumerate(points):
         tx, ty = _tangent(points, index, closed=contour.closed)
         near = _neighbors(points, index, closed=contour.closed)
-        columns = _axis_cells(x, -ty * side, tx, _touch(x, [p[0] for p in near]))
-        rows = _axis_cells(y, tx * side, ty, _touch(y, [p[1] for p in near]))
+        turning = (tx, ty) == (0, 0)
+        across_x = _inward(-ty * side, flat=flat, turning=turning)
+        across_y = _inward(tx * side, flat=flat, turning=turning)
+        columns = _axis_cells(x, across_x, tx, _touch(x, [p[0] for p in near]))
+        rows = _axis_cells(y, across_y, ty, _touch(y, [p[1] for p in near]))
         cells.append(_own_end([(c, r) for c in columns for r in rows], index, contour))
     return cells
 

@@ -4,7 +4,7 @@ import time
 import pytest
 
 from ai_draw.errors import ColorError
-from ai_draw.geometry.path import Path, ellipse, rect
+from ai_draw.geometry.path import Path, ellipse, polygon, rect
 from ai_draw.geometry.transform import Transform
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
@@ -122,3 +122,23 @@ def test_narrow_ellipses_end_in_a_clean_tip(rx: float) -> None:
 def test_a_narrow_ellipse_tip_stays_mirrored() -> None:
     cells = frozenset(line_cells(ellipse(40, 40, 2, 8.5)))
     assert asymmetric_cells(cells, mirror_x=40, mirror_y=40) == 0
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        (rect(0, 4, 8, 0), {(x, 4) for x in range(8)}),
+        (polygon([(0, 4), (4, 4), (8, 4)]), {(x, 4) for x in range(8)}),
+        (ellipse(8, 8, 6, 0), {(x, 8) for x in range(2, 14)}),
+        (Path().move_to(4, 4).close(), {(4, 4)}),
+        (ellipse(4, 4, 0), {(4, 4)}),
+    ],
+    ids=["flat_rect", "flat_polygon", "flat_ellipse", "closed_point", "zero_circle"],
+)
+def test_a_flat_shape_on_a_pixel_edge_is_one_pixel_thick(
+    path: Path, expected: set[tuple[int, int]]
+) -> None:
+    # Regression (audit B5, 02/11): a closed contour of zero area runs both ways over the same
+    # pixels, and each way took its own side of the edge: two rows, or a 2x2 block for a point.
+    # Like the fill's half-open rows, it takes the pixel past the edge.
+    assert line_cells(path) == expected
