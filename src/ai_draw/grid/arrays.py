@@ -76,7 +76,8 @@ def blend(
 ) -> None:
     """Paint ``color`` over ``pixels`` in place, each pixel weighted by its coverage (0 to 1).
 
-    Source-over on straight (not premultiplied) alpha; untouched where the coverage is 0.
+    Source-over on straight (not premultiplied) alpha; untouched where the coverage is 0
+    or the pixel stays fully transparent.
     """
     weight = np.asarray(coverage, dtype=np.float64) * (color[3] / 255)
     ground = pixels.astype(np.float64) / 255
@@ -88,5 +89,8 @@ def blend(
     )
     rgb = mixed / np.where(alpha > 0, alpha, 1)[:, :, None]
     result = np.floor(np.concatenate([rgb, alpha[:, :, None]], axis=2) * 255 + 0.5)
-    touched = weight > 0
+    # A float residue of 1e-17 would write the color under an alpha that rounds to 0 (audit
+    # M8): a pixel that stays fully transparent is left as it was. A faint ground keeps its
+    # exact source-over, where even tiny coverage moves the color.
+    touched = (weight > 0) & (result[:, :, 3] > 0)
     pixels[touched] = result[touched].astype(np.uint8)
