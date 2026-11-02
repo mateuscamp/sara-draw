@@ -13,6 +13,7 @@ their pixel, so a square keeps its corners.
 
 from __future__ import annotations
 
+import itertools
 import math
 from typing import TYPE_CHECKING
 
@@ -226,22 +227,24 @@ def _drop_l_corners(cells: list[Cell], kept_corners: set[Cell], contour: Contour
     return result
 
 
-def _without_repeated_end(contour: Contour) -> Contour:
-    """Drop the repeated last point of a closed contour that comes back to its first one.
+def _without_repeated_points(contour: Contour) -> Contour:
+    """Drop every point equal to the one before it, and a closed contour's copy of its start.
 
-    The copy would walk the seam backwards and skew the tangent at the start.
+    A repeated point has no tangent, so it picks pixels on both sides of an edge (audit M1);
+    the copy of the start would walk the seam backwards and skew the tangent there.
     """
-    points = contour.points
+    points = [contour.points[0]]
+    points.extend(p for before, p in itertools.pairwise(contour.points) if p != before)
     if contour.closed and len(points) > 1 and points[-1] == points[0]:
-        return Contour(points[:-1], closed=True)
-    return contour
+        del points[-1]
+    return Contour(tuple(points), closed=contour.closed)
 
 
 def contour_line(contour: Contour) -> list[Cell]:
     """The pixels of the one-pixel line along ``contour``, in the order the contour runs."""
     if not contour.points:
         return []
-    contour = _without_repeated_end(contour)
+    contour = _without_repeated_points(contour)
     cells = _cells_of_points(contour)
     flat = [cell for point_cells in cells for cell in point_cells]
     joined = [flat[0]]

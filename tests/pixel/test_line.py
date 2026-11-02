@@ -91,3 +91,14 @@ def test_a_large_ellipse_settles_its_steps_quickly() -> None:
     elapsed = time.perf_counter() - start
     assert elapsed < 0.5
     assert l_corners(cells) == 0
+
+
+def test_a_repeated_vertex_draws_the_same_line_as_a_single_one() -> None:
+    # Regression (audit M1, 01/11): the repeated point had no tangent and added two pixels.
+    single = Path().move_to(0.5, 0.5).line_to(4.5, 0.5).line_to(4.5, 4.5)
+    repeated = Path().move_to(0.5, 0.5).line_to(4.5, 0.5).line_to(4.5, 0.5).line_to(4.5, 4.5)
+    assert line_cells(repeated) == line_cells(single)
+
+
+def test_a_zero_length_line_paints_one_pixel() -> None:
+    assert len(line_cells(Path().move_to(4, 4).line_to(4, 4))) == 1
