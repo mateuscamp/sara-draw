@@ -52,6 +52,14 @@ max-complexity = 8  # python-on-rails (ADR-0005)
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all" # AGENTS.md: imports are absolute
 
+# Config lida num lugar só: fora do config.py, ler o ambiente reprova. Repassar o ambiente a um
+# subprocesso é legítimo e leva `# noqa: TID251  # motivo: ...`.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"os.environ".msg = "Só o config.py lê o ambiente; o resto recebe o objeto de config."
+"os.environb".msg = "Só o config.py lê o ambiente; o resto recebe o objeto de config."
+"os.getenv".msg = "Só o config.py lê o ambiente; o resto recebe o objeto de config."
+"os.getenvb".msg = "Só o config.py lê o ambiente; o resto recebe o objeto de config."
+
 [tool.ruff.lint.per-file-ignores]
 "examples/**" = ["INP001"] # examples are scripts run by ai-draw, not a package
 "docs/gallery/**" = ["INP001", "T201"] # scripts that build the README's picture and table
