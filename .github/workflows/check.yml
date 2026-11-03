@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+env:
+  # Commit do main de mateuscamp/claude-skills. O juiz não mora no projeto: o CI o baixa aqui, numa
+  # versão fixa. Mudar esta linha é mudar o portão, e isso é decisão humana.
+  TRILHO_COMMIT: 790883c7277150c9aa7a6ea91e6ab6f567c91822
+  JUIZ: .claude/skills/python-on-rails
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -29,5 +35,15 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: uv, pinned to the version the lock was made with
         run: python -m pip install uv==0.11.9
+      - name: Baixa o juiz na versão fixada
+        run: |
+          base="https://raw.githubusercontent.com/mateuscamp/claude-skills/$TRILHO_COMMIT/python-on-rails"
+          mkdir -p "$HOME/$JUIZ/scripts" "$HOME/$JUIZ/assets"
+          curl -fsSL "$base/scripts/conferir_trilho.py" -o "$HOME/$JUIZ/scripts/conferir_trilho.py"
+          curl -fsSL "$base/assets/pyproject-trilho.toml" -o "$HOME/$JUIZ/assets/pyproject-trilho.toml"
       - name: gate
         run: make check
+      # Direto, além do make: o `make` troca o código de saída por 2, e o juiz roda mesmo que a
+      # chamada dele tenha saído do portão.
+      - name: Juiz
+        run: uv run --locked python -I "$HOME/$JUIZ/scripts/conferir_trilho.py"

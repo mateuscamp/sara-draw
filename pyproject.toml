@@ -91,3 +91,12 @@ filterwarnings = ["error"]   # a deprecation fails today instead of breaking tom
 # shared test code (architecture rules, bench shapes) lives here, importable by name
 pythonpath = ["tests/support"]
 xfail_strict = true
+
+# Desvios do trilho, cada um com ADR aceito. As fronteiras ficam no teste de AST de tests/architecture.
+[[tool.trilhos.desvios]]
+chave = "ruff.per-file-ignores:docs/gallery/**:T201"
+adr = "docs/adr/0005-trilhos-python.md"
+
+[[tool.trilhos.desvios]]
+chave = "padrao.dominio-puro"
+adr = "docs/adr/0005-trilhos-python.md"
