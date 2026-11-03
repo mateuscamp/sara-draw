@@ -116,7 +116,7 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 ```
 src/ai_draw/
   errors/     DrawingError e família    (não importa nada)
-  geometry/   path, transform           (Python puro)
+  geometry/   path, transform, midline  (Python puro)
   grid/       canvas, arrays, noise, rows, outline, compare, palette   (numpy)
   pixel/      fill, line, steps, stroke, rounded, cleanup, defects
   smooth/     coverage (fill), stroke    (referência: FreeType 32×, tests/support)

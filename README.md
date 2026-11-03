@@ -82,10 +82,11 @@ with 1 when it finds one, so it can guard a build.
 ## What is in it
 
 - **geometry**: paths with lines and quadratic and cubic Bézier curves, polygons, rectangles,
-  ellipses, affine transforms.
+  ellipses, affine transforms, the middle line of a thin shape.
 - **pixel**: fill sampled at pixel centers (nonzero and even-odd), with thin parts kept
-  joined; a one-pixel line without L corners, with its steps in order and mirror-symmetric;
-  strokes N pixels wide, a brush stamped along that line; the defect detectors.
+  joined and a shape thinner than a pixel all along drawn as the line along its middle; a
+  one-pixel line without L corners, with its steps in order and mirror-symmetric; strokes N
+  pixels wide, a brush stamped along that line; the defect detectors.
 - **smooth**: exact area coverage (the method of font-rs), and strokes with round caps and
   joins. Within 1/255 of FreeType drawing the same path 32 times larger, averaged back.
 - **grid**: the canvas, sprites from character maps, the computed outline, closed palettes
@@ -105,8 +106,8 @@ with 1 when it finds one, so it can guard a build.
 - Smooth coverage is exact for one contour. Contours that overlap or touch are summed per
   pixel, as FreeType does: two shapes touching with opposite directions leave a see-through
   seam where they meet. Draw them as one contour, or in the same direction.
-- A shape thinner than a pixel all along fills as the few pixel centers it covers, perhaps one
-  lone pixel; draw it as a one-pixel line instead (`ai_draw.pixel.line`).
+- A shape a little over one pixel wide that lies along pixel edges can miss every pixel
+  center and fill as nothing; only a shape thinner than a pixel all along becomes a line.
 - The pixel output's time grows with the path's size, not the canvas's: a rectangle 400,000
   pixels wide filled on a 32x32 canvas takes seconds. Keep paths near the canvas.
 

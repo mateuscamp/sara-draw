@@ -88,6 +88,18 @@ def test_a_thin_ring_drawn_as_two_contours_stays_in_one_piece() -> None:
     assert components(cells_of(canvas)) == 1
 
 
+def test_a_shape_thinner_than_a_pixel_fills_as_the_line_along_its_middle() -> None:
+    # Regression (02/11): it covered no pixel center and vanished.
+    expected = ["........", "........", ".######.", "........"]
+    assert filled(rect(1, 2, 6, 0.5), (8, 4)) == expected
+
+
+def test_a_hole_thinner_than_a_pixel_keeps_the_sampled_fill() -> None:
+    slit = rect(0, 0, 8, 5).extend(rect(1, 2.2, 6, 0.6))
+    expected = ["########", "########", "#......#", "########", "########"]
+    assert filled(slit, (8, 5), "evenodd") == expected
+
+
 def test_fill_refuses_a_half_transparent_color() -> None:
     # Regression (audit M4, 01/11): pixel output is alpha 0 or 255, and 128 was written as is.
     with pytest.raises(ColorError, match="alpha"):
@@ -105,11 +117,12 @@ def _area(corners: list[Point]) -> float:
 
 @given(_CORNERS)
 @example(corners=[(1.0, 20.0), (1.0, 21.0), (10.0, 1.0)])
+@example(corners=[(1.0, 22.5), (27.0, 9.25), (22.375, 12.09375)])
 def test_a_filled_triangle_is_one_piece_without_loose_pixels(corners: list[Point]) -> None:
     # Property (ADR-0006): "thin parts kept joined" (README). A sliver's gap was wider than the
     # bridge of one or two outline cells: 91 of 3,000 random triangles came out in pieces
-    # (02/11). Still pending, found with --hypothesis-profile=explore: a sliver thin all along,
-    # whose fill is one lone pixel, as (1, 22.5), (27, 9.25), (22.375, 12.09375).
+    # (02/11). The second example, found with --hypothesis-profile=explore, is a sliver thin all
+    # along, whose fill was one lone pixel; 2 of the 3,000 still had one.
     _ = assume(_area(corners) > 4)  # a sliver smaller than this may vanish altogether
     canvas = Canvas(32, 32)
     fill(canvas, polygon(corners), INK)

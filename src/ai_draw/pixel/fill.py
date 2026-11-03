@@ -17,7 +17,8 @@ import math
 from typing import TYPE_CHECKING, NamedTuple, get_args
 
 from ai_draw.errors import SettingError
-from ai_draw.geometry.path import FillRule
+from ai_draw.geometry.midline import midline
+from ai_draw.geometry.path import Contour, FillRule
 from ai_draw.grid.canvas import check_pixel_color
 from ai_draw.pixel.cleanup import bridge_gaps
 from ai_draw.pixel.line import contour_line
@@ -25,10 +26,14 @@ from ai_draw.pixel.line import contour_line
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from ai_draw.geometry.path import Contour, Path
+    from ai_draw.geometry.path import Path, Point
     from ai_draw.grid.canvas import Canvas, Color
+    from ai_draw.pixel.line import Cell
 
 __all__ = ["FillRule", "Span", "fill", "spans"]
+
+# A contour thinner than this all along is drawn as its middle line.
+_PIXEL = 1.0
 
 
 class Span(NamedTuple):
@@ -153,7 +158,9 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
 
     A part thinner than a pixel, such as where a star's tips meet, keeps the fill in one
     piece: the contour's own one-pixel outline bridges the gap (``ai_draw.pixel.cleanup``).
-    Separate contours are never bridged to each other.
+    Separate contours are never bridged to each other. A contour thinner than a pixel all
+    along has no inside to sample, and is drawn as the one-pixel line along its middle
+    (``ai_draw.geometry.midline``).
 
     >>> from ai_draw.geometry.path import ellipse
     >>> from ai_draw.grid.canvas import Canvas
@@ -161,14 +168,56 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
     >>> fill(canvas, ellipse(16, 16, 10, 6), (200, 40, 40, 255))
     """
     _ = check_pixel_color(color)
-    found = spans(path.contours(), rule, canvas.height)
+    contours = path.contours()
+    thin = _middle_lines(contours, rule)
+    shapes = [contour for index, contour in enumerate(contours) if index not in thin]
+    found = spans(shapes, rule, canvas.height)
     for span in found:
         canvas.span(span.x, span.y, span.length, color)
+    for x, y in sorted({cell for middle in thin.values() for cell in _flat_line(middle)}):
+        canvas.paint(x, y, color)
     if _pieces(found) < 2:  # noqa: PLR2004  # motivo: one piece needs no bridge
         return
     filled = _cells(found)
-    for x, y in sorted(_bridges(filled, path, rule, canvas.height)):
+    for x, y in sorted(_bridges(filled, shapes, rule, canvas.height)):
         canvas.paint(x, y, color)
+
+
+def _middle_lines(contours: Sequence[Contour], rule: FillRule) -> dict[int, tuple[Point, ...]]:
+    """The middle line of each contour thinner than a pixel all along, by the contour's index.
+
+    Only where it adds ink: a thin contour that cuts a hole, which the path is not inside at
+    the middle of its line, keeps to the sampled fill.
+    """
+    found: dict[int, tuple[Point, ...]] = {}
+    for index, contour in enumerate(contours):
+        middle = midline(contour.points, _PIXEL)
+        if middle is not None and _covers(contours, _center(middle), rule):
+            found[index] = middle
+    return found
+
+
+def _center(middle: tuple[Point, ...]) -> Point:
+    """Halfway along the middle segment: inside the shape, never on its outline."""
+    (x0, y0), (x1, y1) = middle[len(middle) // 2 - 1], middle[len(middle) // 2]
+    return ((x0 + x1) / 2, (y0 + y1) / 2)
+
+
+def _covers(contours: Sequence[Contour], point: Point, rule: FillRule) -> bool:
+    """The path is inside at ``point``: the crossings to its left, counted by ``rule``."""
+    x, y = point
+    left = [crossing for crossing in _crossings(contours, y) if crossing.x < x]
+    count = len(left) if rule == "evenodd" else sum(crossing.direction for crossing in left)
+    return _inside(count, rule)
+
+
+def _flat_line(middle: tuple[Point, ...]) -> list[Cell]:
+    """The one-pixel line of the flat shape the thin one narrows to, out and back.
+
+    Flat, it takes the pixel past an edge it lies on, like the fill's half-open rows (audit B5),
+    whichever way the contour runs.
+    """
+    return contour_line(Contour((*middle, *middle[-2:0:-1]), closed=True))
 
 
 def _cells(found: list[Span]) -> set[tuple[int, int]]:
@@ -193,7 +242,7 @@ def _overlapping_groups(owns: list[set[tuple[int, int]]]) -> list[list[int]]:
 
 
 def _bridges(
-    filled: set[tuple[int, int]], path: Path, rule: FillRule, height: int
+    filled: set[tuple[int, int]], contours: Sequence[Contour], rule: FillRule, height: int
 ) -> set[tuple[int, int]]:
     """The outline cells that join pieces of one shape, never two shapes.
 
@@ -201,7 +250,6 @@ def _bridges(
     alone, a ring with its hole. Each shape bridges only its own pieces, with its own
     outlines, so two shapes side by side stay apart however close (audit A1).
     """
-    contours = path.contours()
     owns = [_cells(spans([contour], rule, height)) for contour in contours]
     added: set[tuple[int, int]] = set()
     for group in _overlapping_groups(owns):
