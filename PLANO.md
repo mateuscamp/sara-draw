@@ -74,6 +74,7 @@ src/ai_draw/
     path.py          move_to, line_to, quad_to, cubic_to, close, polygon, ellipse,
                      rect, rounded_rect, join, flatten
     transform.py     afim 2D (a matrix do SVG); seno/cosseno exatos em 90°
+    midline.py       a linha do meio de uma forma mais fina que uma largura dada
   grid/        a grade de pixels (numpy); porte de um kit de grade anterior, só o núcleo
     canvas.py        Canvas (ndarray H×W×4 uint8), paint, span, rect, copy, enlarged
     arrays.py        máscaras numpy: o único módulo com aritmética de array (tipagem)
@@ -375,6 +376,16 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   religam o vão; todos os caminhos mais curtos, para a lasca simétrica continuar espelhada.
   Amostra de 3.000 triângulos: em pedaços de 91 para 0, pixel solto de 60 para 2; 200 lascas
   simétricas continuam espelhadas; bancada e galeria iguais.
+- Lasca fina em toda a extensão (02/11, decisão do Mateus: "Sim, vira contorno"): um contorno
+  mais fino que um pixel em toda a extensão não tem dentro para amostrar, e saía como um pixel
+  solto ou sumia. Agora vira a linha de 1 px do seu meio (`geometry/midline.py`): os dois lados
+  vão de uma ponta à outra, a linha liga os pontos a meio caminho entre eles e vai até onde sai
+  da forma, na ponta ou no meio de uma ponta romba. O contorno literal foi medido e descartado:
+  os dois lados caem em pixels vizinhos e a lasca do contraexemplo saía dobrada, com 22 cantos
+  em L. Um furo fino continua com a amostragem. Amostra de 3.000 triângulos: pixel solto de 2
+  para 0; 3.000 elipses finas: vazias de 1.335 para 10 (as 10 têm pouco mais de 1 px e estão
+  sobre uma divisa), nenhuma com L, peça a mais ou assimetria no sentido longo; bancada e
+  galeria iguais; 8.000 triângulos do perfil `explore` passam.
 
 ## Próximo passo
 
@@ -387,8 +398,4 @@ como vermelho e o contraexemplo como `@example`:
   a regra da divisa escolhe o pixel de dentro); 3 assimétricas e 1 com L
   (`ellipse(30, 30, 1.5, 10.026991306811004)`). Tentado e descartado: as pernas passarem um
   passo para o lado da forma, que brigava com a suavização (laço) e piorava a bancada e o traço
-  de 2 px;
-- lasca fina em toda a extensão: o preenchimento pega um só centro de pixel e sai um pixel
-  solto (2 de 3.000 triângulos; `(1, 22.5), (27, 9.25), (22.375, 12.09375)`). Desenhar o
-  contorno dessas formas mudaria tudo o que é menor que um pixel: decisão do Mateus. Registrado
-  no README em "Limits".
+  de 2 px.
