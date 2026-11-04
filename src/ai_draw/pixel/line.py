@@ -72,10 +72,18 @@ def _neighbors(points: Sequence[Point], index: int, *, closed: bool) -> list[Poi
 
 
 def _tangent(points: Sequence[Point], index: int, *, closed: bool) -> Point:
+    """The direction through the point, rounded like the points (``_SNAP_DECIMALS``).
+
+    At an ellipse's tip the path runs along the pixel edge's normal, which puts both pixels
+    in; the flattening left 3.6e-15 across it at one tip only, which put in one (02/11).
+    """
     last = len(points) - 1
     before = points[index - 1] if closed or index > 0 else points[index]
     after = points[(index + 1) % len(points)] if closed or index < last else points[index]
-    return after[0] - before[0], after[1] - before[1]
+    return (
+        round(after[0] - before[0], _SNAP_DECIMALS),
+        round(after[1] - before[1], _SNAP_DECIMALS),
+    )
 
 
 def _touch(value: float, neighbors: list[float]) -> int:
