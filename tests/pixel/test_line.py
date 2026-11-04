@@ -230,6 +230,7 @@ _RADII = st.floats(1.5, 18)
 @example(cx=30.5, cy=30.0, rx=2.0, ry=5.0)
 @example(cx=30.0, cy=30.0, rx=7.0, ry=6.125)
 @example(cx=30.0, cy=30.0, rx=1.5, ry=10.026991306811004)
+@example(cx=30.5, cy=30.5, rx=2.0, ry=6.0)
 def test_the_line_of_any_ellipse_is_one_clean_mirrored_ring(
     cx: float, cy: float, rx: float, ry: float
 ) -> None:
@@ -237,9 +238,8 @@ def test_the_line_of_any_ellipse_is_one_clean_mirrored_ring(
     # examples are the softening of abrupt steps making a stroke swell and thin (2, 1, 2), which
     # 146 of 3,000 random ellipses had (02/11). The third, from the ADR's prototype, had two L
     # corners and came out lopsided: float noise of 1e-15 tilted the tangent at one tip only.
-    # Still pending, older than the softening and found with --hypothesis-profile=explore: the
-    # tip of a narrow ellipse centered on a pixel, as ellipse(30.5, 30.5, 2, 6), whose legs end
-    # on a pixel edge.
+    # The fourth, found with --hypothesis-profile=explore, is a one-pixel tip between steps of
+    # 2, as the midpoint ellipse and Zingl's draw it; the wobble reading ran through it.
     cells = frozenset(line_cells(ellipse(cx, cy, rx, ry)))
     assert (components(cells), orphans(cells)) == (1, 0)
     assert l_corners(cells) == 0

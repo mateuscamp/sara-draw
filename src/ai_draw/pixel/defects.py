@@ -160,29 +160,49 @@ def _parent(run: Run, previous: list[Run], current: list[Run]) -> Run | None:
     return parents[0] if len(children) == 1 else None
 
 
+_Tail = tuple[list[int], Run | None]
+"""A chain, and the run of the line before its last run: what shows the line turning back."""
+
+
 def _chains(across: dict[int, list[Run]]) -> list[list[int]]:
-    """The lengths of across runs, followed from line to line while they continue one another."""
+    """The lengths of across runs, followed from line to line while they continue one another.
+
+    A chain also ends where the line turns back, at the tip of a curve (02/11): the tip's own
+    run is not the stroke's width, and the midpoint ellipse and Zingl's draw a one-pixel tip
+    between steps of 2, which read 2, 1, 2 through it.
+    """
     chains: list[list[int]] = []
-    tails: dict[Run, list[int]] = {}
+    tails: dict[Run, _Tail] = {}
     for line in sorted(across):
         tails = _grow_chains(across[line], across.get(line - 1, []), tails, chains)
     return chains
 
 
 def _grow_chains(
-    current: list[Run], previous: list[Run], tails: dict[Run, list[int]], chains: list[list[int]]
-) -> dict[Run, list[int]]:
+    current: list[Run], previous: list[Run], tails: dict[Run, _Tail], chains: list[list[int]]
+) -> dict[Run, _Tail]:
     """Add one line's runs to the chains they continue, or start new ones; return the tails."""
-    next_tails: dict[Run, list[int]] = {}
+    next_tails: dict[Run, _Tail] = {}
     for run in current:
         parent = _parent(run, previous, current)
-        chain = tails.get(parent) if parent is not None else None
-        if chain is None:
+        tail = tails.get(parent) if parent is not None else None
+        if tail is None or parent is None or _turns_back(tail[1], parent, run):
             chain = list[int]()
             chains.append(chain)
+        else:
+            chain = tail[0]
         chain.append(run[1] - run[0] + 1)
-        next_tails[run] = chain
+        next_tails[run] = (chain, parent)
     return next_tails
+
+
+def _turns_back(before: Run | None, middle: Run, after: Run) -> bool:
+    """The line comes into ``middle`` and leaves it on the same side: the tip of a curve."""
+    if before is None:
+        return False
+    past_end = before[0] > middle[1] and after[0] > middle[1]
+    past_start = before[1] < middle[0] and after[1] < middle[0]
+    return past_end or past_start
 
 
 def _bumps(lengths: list[int]) -> int:

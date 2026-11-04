@@ -123,6 +123,17 @@ def test_a_stroke_whose_width_swings_back_and_forth_wobbles() -> None:
     assert wobble(cells("###...", ".##...", ".###..", "..##..", "..###."), 2) == 3
 
 
+def test_steps_that_swing_along_a_one_pixel_line_wobble() -> None:
+    assert wobble(cells("##.....", "..#....", "...##.."), 1) == 1
+
+
+def test_a_one_pixel_tip_between_steps_of_two_is_not_a_wobble() -> None:
+    # Regression (02/11): the reading ran through the tip, 2, 1, 2, where the line turns back.
+    # The midpoint ellipse and Zingl's draw the tip of an ellipse 2 by 6 just like this.
+    tip = cells("..#..", ".#.#.", ".#.#.", "#...#", "#...#", ".#.#.", ".#.#.", "..#..")
+    assert wobble(tip, 1) == 0
+
+
 @pytest.mark.parametrize("width", [0, -5])
 def test_wobble_refuses_a_width_below_one(width: int) -> None:
     # Regression (audit B8, 02/11): wobble answered 0 where thickness_defects refuses the width.
