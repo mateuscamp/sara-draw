@@ -12,7 +12,7 @@ permissions:
 env:
   # Commit do main de mateuscamp/claude-skills. O juiz não mora no projeto: o CI o baixa aqui, numa
   # versão fixa. Mudar esta linha é mudar o portão, e isso é decisão humana.
-  TRILHO_COMMIT: 790883c7277150c9aa7a6ea91e6ab6f567c91822
+  TRILHO_COMMIT: 0513bc6174ab6a3d3a8c36f28c621a522d68d3d3
   JUIZ: .claude/skills/python-on-rails
 
 jobs:
