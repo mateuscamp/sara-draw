@@ -386,16 +386,27 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   para 0; 3.000 elipses finas: vazias de 1.335 para 10 (as 10 têm pouco mais de 1 px e estão
   sobre uma divisa), nenhuma com L, peça a mais ou assimetria no sentido longo; bancada e
   galeria iguais; 8.000 triângulos do perfil `explore` passam.
+- Tangente arredondada (02/11): o contraexemplo encolhido do protótipo do ADR-0006,
+  `ellipse(30, 30, 1.5, 10.026991306811004)`, saía com 2 cantos em L e torto. A planificação
+  deixava 3,6e-15 através da ponta de um lado só: lá a tangente deixava de correr ao longo da
+  normal da divisa e a ponta pegava um pixel, enquanto a do outro lado pegava dois. A tangente
+  agora é arredondada como os pontos (`_SNAP_DECIMALS`). Amostra de 3.000 elipses com centro e
+  raios quaisquer: assimétricas de 3 para 0, com L de 1 para 0; bancada e galeria iguais.
+- Wobble na ponta de 1 pixel (02/11, decisão do Mateus: "Sim, ajusta o detector"): as 14
+  elipses que sobravam tinham a ponta de 1 pixel entre degraus de 2, com o centro do eixo
+  estreito num centro de pixel (`ellipse(30.5, 30.5, 2, 6)`). A perna cobre de fato as duas
+  células, e o midpoint clássico e o algoritmo do Zingl desenham essa ponta igual, pixel a
+  pixel (os dois levavam 2 no detector). O `wobble` seguia a leitura através do ápice e lia 2,
+  1, 2; agora a leitura termina onde a linha volta para trás, como já terminava onde ela se
+  divide no topo achatado de um círculo. Amostra de 3.000 elipses: wobble de 14 para 0; a
+  bancada e a tabela do README (inclusive o `skimage.draw` e o raster cru) iguais; 12.000
+  elipses do perfil `explore` passam. Um 2, 1, 2 ao longo da linha continua contando.
 
 ## Próximo passo
 
 Fase 9 fechada: todos os achados da `/code-audit` resolvidos ou mantidos com motivo.
 
-Pendente, achado pelo Hypothesis no protótipo do ADR-0006, cada um com a sua propriedade
-como vermelho e o contraexemplo como `@example`:
-- elipse: 14 de 3.000 com wobble, todas anteriores à suavização, como a ponta de uma elipse
-  estreita centrada num pixel (`ellipse(30.5, 30.5, 2, 6)`: as pernas terminam numa divisa, e
-  a regra da divisa escolhe o pixel de dentro); 3 assimétricas e 1 com L
-  (`ellipse(30, 30, 1.5, 10.026991306811004)`). Tentado e descartado: as pernas passarem um
-  passo para o lado da forma, que brigava com a suavização (laço) e piorava a bancada e o traço
-  de 2 px.
+Do protótipo do ADR-0006 não sobra nada pendente: as elipses e os triângulos que o Hypothesis
+achou estão resolvidos, cada um com o contraexemplo como `@example`. Fica a elipse de 1 px de
+raio, `ellipse(40, 40, 1, 1.5)`, assimétrica em 2 células: abaixo de 20 pixels vale a escolha
+pixel a pixel (README, "Limits").

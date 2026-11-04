@@ -117,10 +117,12 @@ with 1 when it finds one, so it can guard a build.
 
 ## How it is made
 
-Test first: every test is seen failing before the code that passes it. basedpyright runs in
-its strictest mode and Ruff with all rules. The decisions, in Portuguese, are in
-[`docs/adr`](docs/adr) and [`PLANO.md`](PLANO.md); the architecture rules they set are tests
-in [`tests/architecture`](tests/architecture).
+Test first: every test is seen failing before the code that passes it. Property tests with
+Hypothesis ([ADR-0006](docs/adr/0006-hypothesis.md)) draw random ellipses, triangles and
+lines and check the same rules; each counterexample they find stays as a fixed example.
+basedpyright runs in its strictest mode and Ruff with all rules. The decisions, in
+Portuguese, are in [`docs/adr`](docs/adr) and [`PLANO.md`](PLANO.md); the architecture rules
+they set are tests in [`tests/architecture`](tests/architecture).
 
 ## License
 
