@@ -84,7 +84,9 @@ src/ai_draw/
     palette.py       levantar cores, pares quase iguais, famílias, fundir, quantizar
     compare.py       diff pixel a pixel, recolor
   pixel/       saída (c): o trabalho de verdade
-    fill.py          scanline com amostra no centro (porte do rasterizador Lua anterior)
+    scan.py          scanline com amostra no centro (porte do rasterizador Lua anterior)
+    thin.py          o contorno mais fino que um pixel: linha do meio, corte e furo
+    fill.py          junta a amostra, a regra do contorno fino e as pontes
     line.py          linha 1 px pixel-perfect: sem L, degraus regulares, curva simétrica
     stroke.py        traço de N px por carimbo de pincel ao longo da linha de 1 px
     snap.py          prender vértices na grade
@@ -180,6 +182,8 @@ dois lados, nunca contra o raster cru.
 - `docs/adr/0003-licenca-gpl-3.md` · Aceito
 - `docs/adr/0004-porte-dos-repositorios-privados.md` · Proposto
 - `docs/adr/0005-trilhos-python.md` · Aceito
+- `docs/adr/0006-hypothesis.md` · Aceito
+- `docs/adr/0007-contrato-de-mudanca.md` · Aceito
 
 ## Inspirações (pesquisa de 31/10)
 
@@ -379,8 +383,8 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
 - Lasca fina em toda a extensão (02/11, decisão do Mateus: "Sim, vira contorno"): um contorno
   mais fino que um pixel em toda a extensão não tem dentro para amostrar, e saía como um pixel
   solto ou sumia. Agora vira a linha de 1 px do seu meio (`geometry/midline.py`): os dois lados
-  vão de uma ponta à outra, a linha liga os pontos a meio caminho entre eles e vai até onde sai
-  da forma, na ponta ou no meio de uma ponta romba. O contorno literal foi medido e descartado:
+  vão de uma ponta à outra, a linha liga os pontos a meio caminho entre eles e termina na ponta
+  ou no meio de uma ponta romba. O contorno literal foi medido e descartado:
   os dois lados caem em pixels vizinhos e a lasca do contraexemplo saía dobrada, com 22 cantos
   em L. Um furo fino continua com a amostragem. Amostra de 3.000 triângulos: pixel solto de 2
   para 0; 3.000 elipses finas: vazias de 1.335 para 10 (as 10 têm pouco mais de 1 px e estão
@@ -401,6 +405,52 @@ git. Ideia: vídeo do MagmaDev (YouTube CZ1IU-SkgTE,
   divide no topo achatado de um círculo. Amostra de 3.000 elipses: wobble de 14 para 0; a
   bancada e a tabela do README (inclusive o `skimage.draw` e o raster cru) iguais; 12.000
   elipses do perfil `explore` passam. Um 2, 1, 2 ao longo da linha continua contando.
+- Revisão final de `fill` (06/11, 42.344 cenas de formas soltas contra o `main`): nenhuma regressão
+  grave; distância cruzando 1,2 px piorou em 7 e melhorou em 1.038, nenhuma forma sumiu, chamadas
+  sem contorno fino idênticas. Pegou dois defeitos, corrigidos: a leitura das paredes listava toda
+  célula de toda forma (`rect` de 1000 px de 6 para 220 ms, `MemoryError` em forma muito larga), e
+  uma forma ao lado de um anel estreito contava como parede dele.
+- Trava da ordenação (06/11, decisão do Mateus): `steps._sort_curves` trata um trecho que curva
+  para os dois lados como uma curva só, e nas curvas finas em S a linha saía limpa e fora do lugar;
+  o `main` errava menos por acidente, porque o `_end` antigo quebrava o trecho e deixava L. O
+  `fill` agora redesenha sem ordenar quando uma célula passa de 1,2 px da linha do meio. 300 cúbicas
+  finas: acima de 1,2 px de 51 para 25, acima de 2,2 px de 13 para 1, L de 1.948 para 1.590. O
+  limite ficou em 1,2 px: com 1,0, uma célula a 1,02 px tirava o ritmo de uma lua inteira.
+- Anel estreito (06/11, caminho A): o furo fino cortava paredes sem centro de pixel, e um contorno
+  estreito virava dois pontos. Uma fenda tem o que sobra da forma dos dois lados; quando falta de
+  um lado, o contorno é furo da forma, fica amostrado e a ponte o religa. Só vale para o que é furo: linha
+  que sai da forma segue linha. O preço é a fenda com a ponta na lateral, repintada como no
+  `main`. A regra do contorno fino foi para `pixel/thin.py`, e a amostragem para `pixel/scan.py`.
+- Contrato de mudança (04/11, ADR-0007): a `arquitetura-ai-first` entra no projeto.
+  Spike declarado e apagado antes do primeiro teste, erro deliberado antes do commit e revisão
+  antes do push. Duas regras novas em `tests/architecture`: nenhum teste desligado, e o último
+  commit com teste e evidência. A regra do commit nasceu lendo só a ponta; a revisão mostrou que
+  um `docs:` depois do `fix:` a escondia, e ela passou a ler tudo que está fora do `origin/main`.
+  Mutation testing fica de fora, com o gatilho no ADR.
+- Revisão de `cd194d3..63e2054` (04/11): a primeira pelo ADR-0007, e achou três regressões, todas
+  corrigidas com teste de regressão visto falhando.
+  - Ponta da linha do meio: o raio até a borda corria para dentro numa ponta redonda. Saiu o
+    raio; a linha termina na ponta, ou no meio de uma ponta romba. Sozinho, isso levava as
+    elipses finas giradas de L para desvio: o L caía, e a linha reta saía torta até 4 px, porque
+    a ordenação dos degraus tomava seus muitos segmentos por curva. Contar só L escondeu isso.
+    Agora a linha a até 0,25 px da corda é desenhada como a corda. 792 elipses giradas: L de
+    7.583 para 0, desvio acima de 1 px igual ao `main` (4).
+  - Fenda fina (decisão do Mateus: "Célula a célula"): um único ponto decidia o contorno inteiro.
+    Decidir pelo contorno criou três regressões em duas rodadas de revisão (centro sobre a borda,
+    linhas finas cruzadas, linha que encosta numa forma), então a decisão passou a ser por célula.
+    A tinta é o preenchimento das formas grossas e as linhas finas, menos as células que um
+    contorno fino corta delas; a ponte vem antes do corte. Corte é o que as formas cobrem e o
+    caminho inteiro não, e a regra virou propriedade em `tests/pixel/test_thin.py`: até aí,
+    488 testes passavam em todas as versões tentadas, certas e erradas. Furo é a linha que fica
+    sobre as formas o caminho todo, lida a cada décimo de pixel, e corta em algum ponto; o que o
+    contorno tem fora delas fica como amostrado. Em 3.000 cenas com uma, duas e três formas,
+    anéis e estrelas: linha errada fora delas de 782 para 3 (a linha sobre a forma, diferindo de
+    amostragem na borda), corte pintado de 597 para 0, nada perdido dentro das formas. Custo: o
+    trecho da linha que sai pode ficar solto da forma, e contornos finos sobrepostos em parte
+    não se cancelam. Numa medição com `git stash`, um processo morto deixou o trabalho no stash;
+    comparar com o `main` se faz em cópia exportada do commit.
+  - `wobble`: isentar toda volta da linha o deixou cego a dente de serra. Só a volta isolada, a
+    ponta de uma curva, fica isenta.
 
 ## Próximo passo
 
@@ -410,3 +460,46 @@ Do protótipo do ADR-0006 não sobra nada pendente: as elipses e os triângulos 
 achou estão resolvidos, cada um com o contraexemplo como `@example`. Fica a elipse de 1 px de
 raio, `ellipse(40, 40, 1, 1.5)`, assimétrica em 2 células: abaixo de 20 pixels vale a escolha
 pixel a pixel (README, "Limits").
+
+Pendente da revisão de 04/11:
+- `steps._sort_curves` entorta a linha aberta de 1 px em curvas com inflexão: 222 de 400 curvas
+  em S acima de 1 px, pior caso 6,6, igual no `main`. A trava vale só no `fill`: a correção de
+  raiz é a ordenação respeitar a inflexão. Falta um detector de distância à forma na bancada;
+- `math domain error` em `smooth/stroke.py:109`, fora da família `ai_draw.errors`;
+- a linha do meio sai da forma em 13 de 656 cúbicas finas, até 2,4 px, igual no `main`;
+- `_ring` não cancela contorno que passa duas vezes pelo menor ponto;
+- a regra do commit: `refactor:` passa trocando `is True` por `is False` ou `in` por `not in`;
+  `tests/conftest.py` conta como teste; `fix:` que apaga teste passa; renomear para fora de
+  `src/` passa; `cycle_violations` devolve vazio fora de um repositório git;
+- `disabled_tests` não vê `skipUnless`, `expectedFailure`, `SkipTest` nem arquivo renomeado, e
+  acusa `reader.skip(3)`;
+- o CI confere só o último commit; ampliar isso é mudança no workflow, decisão do Mateus;
+- limpeza: `item` em `commit_rules.py`, `_git` duplicado, `refactor` morto em `SOURCE_KINDS`;
+- o mesmo mecanismo em curvas rasas: 18 lentes de cerca de 787 com célula a mais de 1 px da
+  forma; uma trava de 1 px resolve, mas sobe os degraus bruscos nas ondas de 670 para 940;
+- pontos menores que um pixel: 179 de 1.500 têm mais células que no `main`, sem L;
+- ponta reta subdividida: 37 de 600 retângulos ganharam um degrau, com L de 73 para 16;
+- `wobble` sobe de 0 para 1 em 19 de 3.000 senos: a isenção da ponta deixou o trio seguinte contar;
+- `_end` em ponta reta de lados densos termina no canto: degrau novo em 16 a 19 de 600 arcos e
+  ondas, e a docstring fica falsa nesse caso;
+- a regra do `refactor:`: reprova `old1` para `new2`, vírgula final e comentário com símbolo, e
+  não lê doctest em `src/`; merge lê `files=()`, e em `pull_request` a regra não faz nada; nomes
+  de arquivo com espaço ou acento saem errados; as violações saem em dobro;
+- `test_thin.py` repete os números de `_SQUARE`, e duas propriedades têm dente fraco: uma filtra com
+  `thin_parts`, outra aceita 0 peças; `_WALL_REACH` não tem teste próprio (1, 3 e 40 passam);
+  `scan.py` não tem `test_scan.py`;
+- `_shape_around` lê a forma inteira, então o furo grosso de um anel conta como parede de uma
+  fenda ao longo dele (6 de 81 cenas feitas para isso); forma fina larguíssima (4.000.000 px) dá
+  `MemoryError`, e 1.000 vértices em curva pesam em `_along`; o teste de custo usa relógio;
+- anel estreito perto de 45° ou 135° abre o furo (8 de 1.155); nas curvas em S fortes as duas
+  opções da trava passam de 1,2 px (até 1,63); fendas cruzadas num disco ficam abertas, como manda
+  a regra, com mais L: decisão do Mateus;
+- a fixture `exported_git_dir` roda `git init` antes de limpar o ambiente;
+- a promessa do README falha em arco fino acima de 180° e em U fino;
+- `ValueError` puro de `list.remove` em `steps._no_new_swing`: polígonos que cruzam a si mesmos
+  derrubam `contour_line`, `stroke` e `fill`, igual no `main`, fora da família `ai_draw.errors`;
+- custo: forma fina muito maior que o canvas (4 s), 1.600 contornos finos diagonais (2,7 s),
+  estrela de 4.000 vértices (2,2 s); 9 mutantes sobreviventes da auditoria, reavaliar;
+- decisão do Mateus: partícula sem comprimento, como `rect(3.2, 3.2, 0.05, 0.05)`, pinta 1 pixel;
+- triângulos que o `explore` ainda reprova, iguais no `main`: `(9.375, 1), (10.5, 1), (10.5, 9)` e
+  `(3.375, 1), (4.5, 1), (4.5, 9)`, com pixel solto, e `(11.5, 14), (1, 21), (13.75, 1)`, em 2 peças.

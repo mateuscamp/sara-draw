@@ -112,6 +112,15 @@ with 1 when it finds one, so it can guard a build.
   seam where they meet. Draw them as one contour, or in the same direction.
 - A shape a little over one pixel wide that lies along pixel edges can miss every pixel
   center and fill as nothing; only a shape thinner than a pixel all along becomes a line.
+- Thin contours cancel out only when they have the same points. Two that overlap in part both
+  stay lines, under even-odd too.
+- A thin contour whose middle line stays on the shapes and cuts them is a hole and draws no
+  line; what it holds past them stays as sampled. One whose line leaves the shapes keeps its
+  line past them, read every tenth of a pixel: a narrower gap between shapes can go unseen.
+- A thin contour exactly on the edge where a shape stops reads as outside it, so a slit there adds
+  a line. A slit whose tip reaches the side of a shape is bridged over.
+- A thin contour that crosses itself still becomes a line, unless nothing lies under the middle
+  of that line: then it fills as sampled.
 - The pixel output's time grows with the path's size, not the canvas's: a rectangle 400,000
   pixels wide filled on a 32x32 canvas takes seconds. Keep paths near the canvas.
 
@@ -119,7 +128,9 @@ with 1 when it finds one, so it can guard a build.
 
 Test first: every test is seen failing before the code that passes it. Property tests with
 Hypothesis ([ADR-0006](docs/adr/0006-hypothesis.md)) draw random ellipses, triangles and
-lines and check the same rules; each counterexample they find stays as a fixed example.
+lines and check the same rules; each counterexample they find stays as a fixed example. A
+prototype answers one written question and is deleted before the first test, and each change
+is reviewed before it is pushed ([ADR-0007](docs/adr/0007-contrato-de-mudanca.md)).
 basedpyright runs in its strictest mode and Ruff with all rules. The decisions, in
 Portuguese, are in [`docs/adr`](docs/adr) and [`PLANO.md`](PLANO.md); the architecture rules
 they set are tests in [`tests/architecture`](tests/architecture).
