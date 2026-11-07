@@ -60,7 +60,8 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
     piece: the contour's own one-pixel outline bridges the gap (``ai_draw.pixel.cleanup``).
     Separate contours are never bridged to each other. A contour thinner than a pixel all
     along has no inside to sample, and is drawn as the one-pixel line along its middle
-    (``ai_draw.geometry.midline``).
+    (``ai_draw.geometry.midline``); where it cuts a thicker shape, under the rule, it takes
+    those pixels away instead.
 
     >>> from ai_draw.geometry.path import ellipse
     >>> from ai_draw.grid.canvas import Canvas
@@ -68,16 +69,36 @@ def fill(canvas: Canvas, path: Path, color: Color, rule: FillRule = "nonzero") -
     >>> fill(canvas, ellipse(16, 16, 10, 6), (200, 40, 40, 255))
     """
     _ = check_pixel_color(color)
-    parts = thin_parts(path.contours(), rule)
+    parts = thin_parts(path.contours(), rule, canvas.height)
     found = spans(parts.thick, rule, canvas.height)
-    for span in found:
+    for span in _without(found, parts.cuts):
         canvas.span(span.x, span.y, span.length, color)
-    for x, y in sorted(parts.drawn):
+    # The bridges join the shapes before the cuts: a slit that divides a shape stays open.
+    added = set(parts.drawn)
+    if _pieces(found) >= 2:  # noqa: PLR2004  # motivo: one piece needs no bridge
+        added |= _bridges(cells_of_spans(found), parts.thick, rule, canvas.height)
+    for x, y in sorted(added - parts.cuts):
         canvas.paint(x, y, color)
-    if _pieces(found) < 2:  # noqa: PLR2004  # motivo: one piece needs no bridge
-        return
-    for x, y in sorted(_bridges(cells_of_spans(found), parts.thick, rule, canvas.height)):
-        canvas.paint(x, y, color)
+
+
+def _without(found: list[Span], cuts: set[tuple[int, int]]) -> list[Span]:
+    """``found`` with ``cuts`` taken out, still in spans: a slit is no reason to paint by pixel."""
+    if not cuts:
+        return found
+    by_row: dict[int, list[int]] = {}
+    for x, y in sorted(cuts):
+        by_row.setdefault(y, []).append(x)
+    return [piece for span in found for piece in _split(span, by_row.get(span.y, []))]
+
+
+def _split(span: Span, holes: list[int]) -> list[Span]:
+    pieces: list[Span] = []
+    start, end = span.x, span.x + span.length
+    for hole in [*(x for x in holes if span.x <= x < end), end]:
+        if hole > start:
+            pieces.append(Span(start, span.y, hole - start))
+        start = hole + 1
+    return pieces
 
 
 def _overlapping_groups(owns: list[set[tuple[int, int]]]) -> list[list[int]]:

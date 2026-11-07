@@ -123,11 +123,13 @@ def spans(contours: Sequence[Contour], rule: FillRule, height: int) -> list[Span
 
 
 def covers(row: list[Crossing], x: float, rule: FillRule) -> bool:
-    """The path is inside at ``x`` on a row: the crossings to its left, counted by ``rule``.
+    """The path is inside at ``x`` on a row: the crossings up to it, counted by ``rule``.
 
-    The sum of the directions has the parity of the count, so it serves both rules.
+    Up to it and not before it: ``_span`` counts a center on the entry as inside and one on the
+    exit as outside (audit, 04/11). The sum of the directions has the parity of the count, so it
+    serves both rules.
     """
-    return _inside(sum(crossing.direction for crossing in row if crossing.x < x), rule)
+    return _inside(sum(crossing.direction for crossing in row if crossing.x <= x), rule)
 
 
 def cells_of_spans(found: list[Span]) -> set[tuple[int, int]]:

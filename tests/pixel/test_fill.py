@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import math
+from collections.abc import Callable
 from typing import cast
 
 import pytest
@@ -103,8 +104,122 @@ SLIT_ACROSS_A_SQUARE = [
 ]
 
 
+def test_a_thin_contour_that_crosses_a_shape_keeps_the_slit_it_cuts() -> None:
+    # Regression (audit, 04/11): one point decided the whole contour, past the square here, and
+    # the slit filled in.
+    crossing = rect(2, 1, 4, 4).extend(rect(0, 2.2, 16, 0.6))
+    assert filled(crossing, (16, 5), "evenodd") == SLIT_ACROSS_A_SQUARE
+
+
+def test_a_thin_contour_running_backwards_keeps_the_slit_it_cuts() -> None:
+    backwards = polygon([(0, 2.2), (0, 2.8), (16, 2.8), (16, 2.2)])
+    assert filled(rect(2, 1, 4, 4).extend(backwards), (16, 5)) == SLIT_ACROSS_A_SQUARE
+
+
+def test_two_thin_contours_that_cancel_out_paint_nothing() -> None:
+    twice = rect(1, 2, 6, 0.5).extend(rect(1, 2, 6, 0.5))
+    assert filled(twice, (8, 4), "evenodd") == ["........"] * 4
+
+
+@pytest.mark.parametrize(
+    ("corners", "pixels"),
+    [
+        ([(2.5, 1.1), (20, 9.1), (20, 9.7), (2.5, 1.7)], 18),
+        ([(0.5, 0.5), (20.5, 10.5), (21, 10.5), (1, 0.5)], 21),
+    ],
+    ids=["left_edge", "both_edges"],
+)
+def test_a_thin_contour_with_an_edge_on_a_pixel_center_is_still_a_line(
+    corners: list[Point], pixels: int
+) -> None:
+    # The fill counts a center on the entry; a first version of the cut check did not (04/11).
+    canvas = Canvas(24, 12)
+    fill(canvas, polygon(corners), INK)
+    cells = cells_of(canvas)
+    assert (len(cells), l_corners(cells)) == (pixels, 0)
+
+
+def _ribbon(x0: float, y0: float, x1: float, y1: float) -> Path:
+    return polygon([(x0, y0), (x1, y1), (x1, y1 + 0.5), (x0, y0 + 0.5)])
+
+
+def _ribbon_backwards(x0: float, y0: float, x1: float, y1: float) -> Path:
+    return polygon([(x0, y0 + 0.5), (x1, y1 + 0.5), (x1, y1), (x0, y0)])
+
+
+@pytest.mark.parametrize(
+    ("second", "rule"),
+    [(_ribbon, "evenodd"), (_ribbon_backwards, "nonzero")],
+    ids=["evenodd", "nonzero_backwards"],
+)
+def test_two_thin_lines_that_cross_stay_lines(second: Callable[..., Path], rule: FillRule) -> None:
+    # The pixel they share sent both back to the sampled fill, in a first version (04/11).
+    first = _ribbon(2, 4.3, 30, 17.7)
+    other = second(8, 17.7, 30, 1.3)
+    canvas, apart = Canvas(34, 22), Canvas(34, 22)
+    fill(apart, first, INK)
+    fill(apart, other, INK)
+    fill(canvas, first.extend(other), INK, rule)  # extend changes first: last
+    assert cells_of(canvas) == cells_of(apart)
+
+
+def test_a_slit_that_divides_a_shape_stays_open() -> None:
+    # Regression (audit, 04/11): the bridge between the two halves painted the slit over.
+    divided = rect(2, 1, 4, 4).extend(rect(2, 2.2, 4, 0.6))
+    expected = ["......", "..####", "......", "..####", "..####"]
+    assert filled(divided, (6, 5), "evenodd") == expected
+
+
+def _outside(cells: frozenset[tuple[int, int]], square: range) -> set[tuple[int, int]]:
+    return {(x, y) for x, y in cells if x not in square or y not in square}
+
+
 _LEAVES_THE_SQUARE = polygon([(9.2, 9.3), (9.2, 9.45), (30, 20.4), (30, 20.25)])
 _CROSSES_THE_SQUARE = polygon([(0, 0), (0, 0.8), (24, 24.8), (24, 24)])
+
+
+@pytest.mark.parametrize(
+    ("line", "side", "rule"),
+    [
+        (_LEAVES_THE_SQUARE, 5, "evenodd"),
+        (_LEAVES_THE_SQUARE, 5, "nonzero"),
+        (_CROSSES_THE_SQUARE, 16, "evenodd"),
+    ],
+    ids=["leaves_evenodd", "leaves_nonzero_backwards", "crosses_evenodd"],
+)
+def test_a_thin_line_keeps_its_way_outside_a_shape_it_cuts(
+    line: Path, side: int, rule: FillRule
+) -> None:
+    # Past the square the line stays a line. A first version sent it all back to the sampled
+    # fill for one center under the square (04/11), and the ends of the last case vanish on main.
+    together, alone = Canvas(34, 34), Canvas(34, 34)
+    fill(together, rect(5, 5, side, side).extend(line), INK, rule)
+    fill(alone, line, INK)
+    square = range(5, 5 + side)
+    assert _outside(cells_of(together), square) == _outside(cells_of(alone), square)
+
+
+def test_a_thin_line_through_the_middle_of_another_stays_a_line() -> None:
+    # Regression (audit, 04/11): the middle of one fell on the other.
+    width = 0.3
+    first = polygon([(2, 4.3), (30, 17.7), (30, 17.7 + width), (2, 4.3 + width)])
+    second = polygon([(4, -1), (32, 27), (32, 27 + width), (4, -1 + width)])
+    together, apart = Canvas(34, 30), Canvas(34, 30)
+    fill(apart, first, INK)
+    fill(apart, second, INK)
+    fill(together, first.extend(second), INK, "evenodd")  # extend changes first: last
+    assert cells_of(together) == cells_of(apart)
+
+
+def test_a_thin_contour_drawn_both_ways_paints_nothing_under_nonzero() -> None:
+    both_ways = rect(1, 2, 6, 0.5).extend(polygon([(1, 2), (1, 2.5), (7, 2.5), (7, 2)]))
+    assert filled(both_ways, (8, 4)) == ["........"] * 4
+
+
+def test_a_thin_contour_that_adds_to_a_shape_is_still_a_line() -> None:
+    whisker = rect(2, 1, 4, 4).extend(rect(0, 2, 8, 0.5))
+    expected = ["........", "..####..", "########", "..####..", "..####.."]
+    assert filled(whisker, (8, 5)) == expected
 
 
 def _round_tip(center: Point, facing: float) -> list[Point]:
