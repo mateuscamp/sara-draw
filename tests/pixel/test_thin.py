@@ -10,14 +10,16 @@ from __future__ import annotations
 
 import math
 
+import pytest
 from hypothesis import example, given
 from hypothesis import strategies as st
 
-from ai_draw.geometry.path import Path, ellipse, rect
+from ai_draw.geometry.path import Path, Point, ellipse, rect
 from ai_draw.geometry.transform import Transform
 from ai_draw.grid.canvas import Canvas, Color
-from ai_draw.pixel.defects import Cells, cells_of, l_corners
+from ai_draw.pixel.defects import Cells, cells_of, l_corners, wobble
 from ai_draw.pixel.fill import FillRule, fill
+from ai_draw.smooth.stroke import stroke_outline
 
 INK: Color = (20, 20, 20, 255)
 SIZE = 40
@@ -91,6 +93,38 @@ def test_a_dot_smaller_than_a_pixel_has_no_l_corner() -> None:
     assert l_corners(_inked(rect(8.375, 8.625, 0.75, 0.75), "nonzero")) == 0
 
 
+@pytest.mark.parametrize(
+    ("controls", "width"),
+    [
+        (((4, 24), (26, 38), (32, 16), (46, 14)), 0.3),
+        (((14, 41), (38, 43), (13, 45), (35, 48)), 0.5),
+    ],
+    ids=["s_curve", "tight_s_curve"],
+)
+def test_a_thin_s_curve_stays_on_its_shape(
+    controls: tuple[Point, Point, Point, Point], width: float
+) -> None:
+    # Regression (audit, 04/11): sorting the steps takes a curve that bends both ways for one
+    # curve, and the line came out clean and 3 pixels off the shape. No L corner shows it.
+    start, first, second, end = controls
+    curve = Path().move_to(*start).cubic_to(*first, *second, *end)
+    along = curve.contours()[0].points
+    canvas = Canvas(64, 64)
+    fill(canvas, stroke_outline(curve, width), INK)
+    cells = cells_of(canvas)
+    assert cells
+    assert all(min(math.dist((x + 0.5, y + 0.5), p) for p in along) < 1.2 for x, y in cells)
+
+
 _LONG = st.floats(10, 18).map(lambda value: round(value * 8) / 8)
 _HOLE = st.floats(0.125, 0.5).map(lambda value: round(value * 8) / 8)
 _WALL = st.floats(0.3, 0.9).map(lambda value: round(value * 8) / 8)
+
+
+def test_a_crescent_keeps_its_steps_in_order() -> None:
+    # Regression (audit, 06/11): one cell 1.02 pixels off its line unsorted the whole curve.
+    moon = Path().move_to(8.5, 20.75).quad_to(28.5, 60.75, 48.5, 20.75)
+    moon = moon.quad_to(28.5, 62.35, 8.5, 20.75).close()
+    canvas = Canvas(64, 64)
+    fill(canvas, moon, INK)
+    assert wobble(cells_of(canvas), 1) == 0

@@ -325,8 +325,11 @@ def _without_repeated_points(contour: Contour) -> Contour:
     return Contour(tuple(points), closed=contour.closed)
 
 
-def contour_line(contour: Contour) -> list[Cell]:
-    """The pixels of the one-pixel line along ``contour``, in the order the contour runs."""
+def contour_line(contour: Contour, *, sort_curves: bool = True) -> list[Cell]:
+    """The pixels of the one-pixel line along ``contour``, in the order the contour runs.
+
+    ``sort_curves`` is passed on to ``even_out_steps``.
+    """
     if not contour.points:
         return []
     contour = _without_repeated_points(contour)
@@ -344,7 +347,7 @@ def contour_line(contour: Contour) -> list[Cell]:
     if contour.closed and len(joined) > 1:
         del joined[-1]
     clean = _drop_l_corners(joined, _corners(contour, cells), contour)
-    return even_out_steps(clean, closed=contour.closed, straight=straight)
+    return even_out_steps(clean, closed=contour.closed, straight=straight, sort_curves=sort_curves)
 
 
 def line_cells(path: Path) -> set[Cell]:

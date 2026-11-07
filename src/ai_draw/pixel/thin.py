@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
-from ai_draw.geometry.midline import midline, straightened
+from ai_draw.geometry.midline import distance_to_line, midline, straightened
 from ai_draw.geometry.path import Contour
 from ai_draw.pixel.line import contour_line
 from ai_draw.pixel.scan import covers, crossings
@@ -29,6 +29,8 @@ __all__ = ["ThinParts", "thin_parts"]
 _PIXEL = 1.0
 # A middle line this close to its chord is drawn as the chord.
 _STRAIGHT_WITHIN = 0.25
+# A pixel center this far from the middle line is off the line.
+_STAYS_WITHIN = 1.2
 
 
 class ThinParts(NamedTuple):
@@ -72,7 +74,13 @@ def _flat_line(middle: tuple[Point, ...]) -> list[Cell]:
     """The one-pixel line of the flat shape the thin one narrows to, out and back.
 
     Flat, it takes the pixel past an edge it lies on, like the fill's half-open rows (audit B5),
-    whichever way the contour runs.
+    whichever way the contour runs. Sorting the steps can carry a curve that bends both ways off
+    the line, clean and in the wrong place; a line that leaves is drawn again unsorted (audit,
+    04/11).
     """
     line = straightened(middle, _STRAIGHT_WITHIN)
-    return contour_line(Contour((*line, *line[-2:0:-1]), closed=True))
+    flat = Contour((*line, *line[-2:0:-1]), closed=True)
+    cells = contour_line(flat)
+    if all(distance_to_line((x + 0.5, y + 0.5), line) <= _STAYS_WITHIN for x, y in cells):
+        return cells
+    return contour_line(flat, sort_curves=False)

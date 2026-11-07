@@ -337,14 +337,19 @@ def _rebuild(start: Cell, stretch: _Stretch) -> list[Cell]:
 
 
 def even_out_steps(
-    cells: list[Cell], *, closed: bool, straight: AbstractSet[Cell] = _NO_CELLS
+    cells: list[Cell],
+    *,
+    closed: bool,
+    straight: AbstractSet[Cell] = _NO_CELLS,
+    sort_curves: bool = True,
 ) -> list[Cell]:
     """Put the runs of a one-pixel line back in order, each between its neighbors' lengths.
 
     A run that is not straight (a corner the line keeps) and the runs at an open line's ends
     never move. ``closed`` lines are read around the seam. The cells in ``straight`` lie on a
     straight side of the path: a curve's order never reaches the runs through them, whose
-    rhythm is the side's own (``_sort_curves``).
+    rhythm is the side's own (``_sort_curves``). Without ``sort_curves`` the steps are only
+    settled: sorting takes a stretch that bends both ways for one curve, and moves it.
     """
     steps = _steps(cells, closed=closed)
     diagonal_at = [i for i, step in enumerate(steps) if _is_diagonal(step)]
@@ -355,7 +360,8 @@ def even_out_steps(
     stretch = _Stretch(runs[:-1] if closed else runs, diagonals, closed=closed)
     rotated = cells[shift:] + cells[:shift]
     held = _held_runs(rotated, steps[shift:] + steps[:shift], straight)
-    _sort_curves(stretch, held)
+    if sort_curves:
+        _sort_curves(stretch, held)
     _settle(stretch)
     moved = _soften(stretch, held)
     rebuilt = _rebuild((cells[shift][0] + moved[0], cells[shift][1] + moved[1]), stretch)
