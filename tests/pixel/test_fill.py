@@ -10,7 +10,7 @@ from ai_draw.errors import ColorError
 from ai_draw.geometry.path import Path, Point, ellipse, polygon, rect
 from ai_draw.grid.canvas import Canvas, Color
 from ai_draw.grid.rows import to_rows
-from ai_draw.pixel.defects import cells_of, components, orphans
+from ai_draw.pixel.defects import cells_of, components, l_corners, orphans, wobble
 from ai_draw.pixel.fill import FillRule, Span, fill, spans
 
 INK: Color = (20, 20, 20, 255)
@@ -92,6 +92,41 @@ def test_a_shape_thinner_than_a_pixel_fills_as_the_line_along_its_middle() -> No
     # Regression (02/11): it covered no pixel center and vanished.
     expected = ["........", "........", ".######.", "........"]
     assert filled(rect(1, 2, 6, 0.5), (8, 4)) == expected
+
+
+SLIT_ACROSS_A_SQUARE = [
+    "................",
+    "..####..........",
+    "##....##########",
+    "..####..........",
+    "..####..........",
+]
+
+
+_LEAVES_THE_SQUARE = polygon([(9.2, 9.3), (9.2, 9.45), (30, 20.4), (30, 20.25)])
+_CROSSES_THE_SQUARE = polygon([(0, 0), (0, 0.8), (24, 24.8), (24, 24)])
+
+
+def _round_tip(center: Point, facing: float) -> list[Point]:
+    turns = [math.radians(facing + step * 20) for step in range(10)]
+    return [(center[0] + 0.25 * math.cos(a), center[1] + 0.25 * math.sin(a)) for a in turns]
+
+
+def _on_circle(radius: float, degrees: float) -> Point:
+    a = math.radians(degrees)
+    return (30 + radius * math.cos(a), 40 + radius * math.sin(a))
+
+
+def test_a_thin_arc_with_round_tips_fills_without_l_corners() -> None:
+    # Regression (audit, 04/11): each end of the middle line hooked back from the tip.
+    outer = [_on_circle(20.25, 200 + step * 14 / 3) for step in range(31)]
+    inner = [_on_circle(19.75, 340 - step * 14 / 3) for step in range(31)]
+    tips = _round_tip(_on_circle(20, 340), 340), _round_tip(_on_circle(20, 200), 20)
+    canvas = Canvas(64, 64)
+    fill(canvas, polygon([*outer, *tips[0], *inner, *tips[1]]), INK)
+    assert l_corners(cells_of(canvas)) == 0
+    assert all(abs(math.dist((x + 0.5, y + 0.5), (30, 40)) - 20) < 1.2 for x, y in cells_of(canvas))
+    assert wobble(cells_of(canvas), 1) == 0  # a smooth curve keeps its steps sorted
 
 
 def test_a_hole_thinner_than_a_pixel_keeps_the_sampled_fill() -> None:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
-from ai_draw.geometry.midline import midline
+from ai_draw.geometry.midline import midline, straightened
 from ai_draw.geometry.path import Contour
 from ai_draw.pixel.line import contour_line
 from ai_draw.pixel.scan import covers, crossings
@@ -27,6 +27,8 @@ __all__ = ["ThinParts", "thin_parts"]
 
 # A contour thinner than this all along is drawn as its middle line.
 _PIXEL = 1.0
+# A middle line this close to its chord is drawn as the chord.
+_STRAIGHT_WITHIN = 0.25
 
 
 class ThinParts(NamedTuple):
@@ -72,4 +74,5 @@ def _flat_line(middle: tuple[Point, ...]) -> list[Cell]:
     Flat, it takes the pixel past an edge it lies on, like the fill's half-open rows (audit B5),
     whichever way the contour runs.
     """
-    return contour_line(Contour((*middle, *middle[-2:0:-1]), closed=True))
+    line = straightened(middle, _STRAIGHT_WITHIN)
+    return contour_line(Contour((*line, *line[-2:0:-1]), closed=True))

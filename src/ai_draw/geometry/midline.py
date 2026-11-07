@@ -6,8 +6,8 @@ covers one pixel center, or none. Its middle line keeps its length and its place
 one pixel wide it is what the shape looks like at that size (``ai_draw.pixel.fill``).
 
 The two sides run from one end of the shape to the other. The middle line joins the halfway
-points between them, taken at the same share of each side's length, and goes on to where it
-leaves the shape: at a tip, or at the middle of a blunt end.
+points between them, taken at the same share of each side's length, and ends at a tip or at
+the middle of a blunt end.
 
     >>> midline(((0, 0), (8, 0), (8, 0.5), (0, 0.5)), 1)
     ((8.0, 0.25), (7.75, 0.25), (0.25, 0.25), (0.0, 0.25))
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from ai_draw.geometry.path import Point
 
-__all__ = ["midline"]
+__all__ = ["distance_to_line", "midline", "straightened"]
 
 
 def midline(points: Sequence[Point], width: float) -> tuple[Point, ...] | None:
@@ -42,9 +42,36 @@ def midline(points: Sequence[Point], width: float) -> tuple[Point, ...] | None:
     if _gap(near, far) >= width:
         return None
     middles = _middles(near, far) or [_halfway(near[0], near[-1])]
-    start = _end(near, far, width, middles[0], points)
-    finish = _end(near[::-1], far[::-1], width, middles[-1], points)
+    start = _end(near, far, width, middles[0])
+    finish = _end(near[::-1], far[::-1], width, middles[-1])
     return tuple(point for point, _ in itertools.groupby([start, *middles, finish]))
+
+
+def straightened(line: tuple[Point, ...], tolerance: float) -> tuple[Point, ...]:
+    """Only the ends of ``line``, if all of it lies within ``tolerance`` of the chord between them.
+
+    A straight middle line comes in many short segments, and the pixel line takes those for a
+    curve and sorts its steps, which bends it off the shape (audit, 04/11). All or nothing: a
+    real curve keeps every point, or its smooth steps would turn into a polygon's.
+
+    >>> straightened(((0, 0), (5, 0.2), (10, 0)), 0.25)
+    ((0, 0), (10, 0))
+    """
+    start, end = line[0], line[-1]
+    near = all(_to_segment(point, start, end) <= tolerance for point in line)
+    return (start, end) if near else line
+
+
+def distance_to_line(point: Point, line: tuple[Point, ...]) -> float:
+    """How far ``point`` is from the open polyline ``line``.
+
+    >>> distance_to_line((5, 3), ((0, 0), (10, 0)))
+    3.0
+    """
+    return min(
+        (_to_segment(point, start, end) for start, end in itertools.pairwise(line)),
+        default=math.dist(point, line[0]),
+    )
 
 
 def _could_be_thin(points: Sequence[Point], width: float) -> bool:
@@ -129,47 +156,17 @@ def _halfway(first: Point, second: Point) -> Point:
     return ((first[0] + second[0]) / 2, (first[1] + second[1]) / 2)
 
 
-def _end(
-    near: list[Point], far: list[Point], width: float, inside: Point, points: Sequence[Point]
-) -> Point:
-    """Where the line from ``inside`` toward the middle of the end leaves the shape.
+def _end(near: list[Point], far: list[Point], width: float, inside: Point) -> Point:
+    """Where the middle line ends, coming from ``inside`` on the way to the tip of both sides.
 
-    The middle of the end is halfway between the last vertices of each side within ``width``
-    of the tip: the tip itself, or the middle of a blunt end's short side. A round tip is
-    farther out than that middle, and the line goes on to it.
+    A blunt end's middle lies halfway between the last vertices of each side within ``width``
+    of the tip. On a pointed or round tip the line is already at least as close to the tip as
+    that point: aimed at it, the line would turn back (audit, 04/11), so the tip is the end.
     """
-    aim = _halfway(_last_within(near, width), _last_within(far, width))
-    if aim == inside:
-        return aim
-    leaves = _exit(inside, aim, points)
-    return aim if leaves is None else leaves
+    tip, aim = near[0], _halfway(_last_within(near, width), _last_within(far, width))
+    return tip if math.dist(tip, inside) <= math.dist(tip, aim) else aim
 
 
 def _last_within(side: list[Point], width: float) -> Point:
     tip = side[0]
     return list(itertools.takewhile(lambda point: math.dist(tip, point) <= width, side))[-1]
-
-
-def _exit(origin: Point, aim: Point, points: Sequence[Point]) -> Point | None:
-    """The first point where the ray from ``origin`` through ``aim`` crosses the contour."""
-    ends = [*points[1:], *points[:1]]
-    crossings = [
-        crossing
-        for start, end in zip(points, ends, strict=True)
-        if (crossing := _crossing(origin, aim, start, end)) is not None
-    ]
-    return min(crossings)[1] if crossings else None
-
-
-def _crossing(origin: Point, aim: Point, start: Point, end: Point) -> tuple[float, Point] | None:
-    """How far along the ray (in ``aim - origin`` lengths) it crosses the edge, and where."""
-    (ox, oy), (ax, ay), (sx, sy), (ex, ey) = origin, aim, start, end
-    dx, dy, edge_x, edge_y = ax - ox, ay - oy, ex - sx, ey - sy
-    denominator = dx * edge_y - dy * edge_x
-    if denominator == 0:
-        return None
-    along = ((sx - ox) * edge_y - (sy - oy) * edge_x) / denominator
-    share = ((sx - ox) * dy - (sy - oy) * dx) / denominator
-    if along <= 0 or not 0 <= share <= 1:
-        return None
-    return along, (sx + share * edge_x, sy + share * edge_y)
