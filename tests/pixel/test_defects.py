@@ -127,6 +127,11 @@ def test_steps_that_swing_along_a_one_pixel_line_wobble() -> None:
     assert wobble(cells("##.....", "..#....", "...##.."), 1) == 1
 
 
+def test_a_sawtooth_that_turns_back_at_every_step_wobbles() -> None:
+    # Regression (audit, 04/11): ending the reading at every turn hid it, 5 before and 0 after.
+    assert wobble(cells(".#.#.#.", "#.#.#.#", "#.#.#.#"), 1) == 5
+
+
 def test_a_one_pixel_tip_between_steps_of_two_is_not_a_wobble() -> None:
     # Regression (02/11): the reading ran through the tip, 2, 1, 2, where the line turns back.
     # The midpoint ellipse and Zingl's draw the tip of an ellipse 2 by 6 just like this.
