@@ -128,7 +128,7 @@ src/ai_draw/
   errors/     DrawingError e família    (não importa nada)
   geometry/   path, transform, midline  (Python puro)
   grid/       canvas, arrays, noise, rows, outline, compare, palette   (numpy)
-  pixel/      fill, line, steps, stroke, rounded, cleanup, defects
+  pixel/      scan, fill, thin, line, steps, stroke, rounded, cleanup, defects
   smooth/     coverage (fill), stroke    (referência: FreeType 32×, tests/support)
   io/         png, scene, live          (único com disco e PIL)
   cli.py
