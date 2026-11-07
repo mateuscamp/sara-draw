@@ -7,6 +7,7 @@ Kept apart from the tests so the rules and their tests each fit in one agent rea
 from __future__ import annotations
 
 import ast
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -44,6 +45,9 @@ THIRD_PARTY: dict[str, frozenset[str]] = {
     "io": frozenset({"numpy", "PIL"}),
     TOP_LEVEL: frozenset({"numpy"}),
 }
+
+# ADR-0007: what switches a test off.
+SWITCH_OFF = re.compile(r"skip|skipif|xfail|importorskip|(_+|x|dont_)test_.*", re.IGNORECASE)
 
 MAX_FILE_LINES = 400  # AGENTS.md: a file fits in one agent read
 MAX_FUNCTION_LINES = 40  # hard ceiling; AGENTS.md aims at 20
@@ -336,4 +340,23 @@ def io_only_violations(package_dir: Path) -> list[str]:
         for path in python_files(package_dir)
         if layer_of(path, package_dir) != "io"
         for name, line in io_only_uses(parse(path))
+    ]
+
+
+def _switched_off(tree: ast.Module) -> list[tuple[str, int]]:
+    found: list[tuple[str, int]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and SWITCH_OFF.fullmatch(node.attr):
+            found.append((node.attr, node.lineno))
+        elif isinstance(node, ast.alias | ast.FunctionDef) and SWITCH_OFF.fullmatch(node.name):
+            found.append((node.name, node.lineno))
+    return found
+
+
+def disabled_tests(paths: list[Path]) -> list[str]:
+    """ADR-0007: tests switched off or renamed out of collection."""
+    return [
+        f"{where(path, line)}: {name} switches a test off (AGENTS.md, ADR-0007)"
+        for path in paths
+        for name, line in _switched_off(parse(path))
     ]

@@ -79,10 +79,20 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 2. Verde: o mínimo de código que passa, sem editar o teste. Rode a suíte inteira.
 3. Refatore com a suíte verde. Depois o portão e o commit.
 
+- O teste conduz o desenho: ele nasce do comportamento pedido, antes de existir solução.
+- Spike (ADR-0007): só para uma pergunta escrita antes, fora do repositório, apagado antes do
+  primeiro teste. O relatório diz o que ele ensinou; não cole o código dele. Corrigir, medir e
+  desfazer para ver o vermelho é spike: declare.
+- Antes do commit, erro deliberado: troque a implementação por uma versão errada plausível.
+  Nenhum teste falhou? Falta teste, com o seu próprio vermelho.
 - Bug: primeiro o teste de regressão visto falhando, depois o fix, no mesmo commit.
+- Código sem teste: teste de caracterização antes de mudar.
 - O relatório da tarefa mostra a linha de falha do vermelho e o resumo do verde.
-- Proibido para ficar verde: mudar asserção, `skip`/`xfail`, apagar teste, asserção mais
-  fraca, mockar o sujeito sob teste, `try/except` no teste. Teste errado? Diga e volte ao vermelho.
+- Mudança em `src/` é `fix:`, `feat:` ou `refactor:`. `fix:` e `feat:` trazem teste e, no corpo,
+  `Comando`, `Vermelho` e `Verde`. Vale para todo commit fora do `origin/main`.
+- Proibido para ficar verde: mudar asserção, `skip`/`xfail`, apagar teste ou renomeá-lo para fora
+  da coleta, asserção mais fraca, mockar o sujeito sob teste, `try/except` no teste. Teste
+  errado? Diga e volte ao vermelho.
 - Gabarito de raster pequeno é mapa de caracteres no próprio teste (`from_rows`), não PNG.
 
 ## Bancada de defeitos (driver ★)
@@ -97,8 +107,8 @@ Arquitetura: monólito modular, um pacote · Quantum: 1. ADRs em `docs/adr/`, pl
 ## Refatoração
 
 - Muda estrutura, não comportamento: suíte verde antes e depois, nenhuma asserção alterada.
-- Nunca refatorar e mudar comportamento no mesmo commit.
-- Passos pequenos; edite o arquivo existente, nunca o regenere inteiro.
+- Nunca refatorar e mudar comportamento no mesmo commit. Commit `refactor:` não muda o que um teste espera: só nomes.
+- Passos pequenos; edite o arquivo existente, nunca o regenere inteiro. Só nos arquivos que a tarefa toca.
 - Mover código entre camadas é decisão arquitetural: ADR antes.
 
 ## Testes
@@ -126,7 +136,11 @@ tests/<camada>/ · tests/architecture/ · tests/bench/ · tests/support/ (regras
 docs/adr/
 ```
 
-## Ao terminar a implementação
+## Revisão antes do push (ADR-0007)
 
-- Rode a skill `/code-review` e, depois dela, a `/code-audit` sobre o pacote inteiro (fase 9
-  do plano).
+- Todo diff de `src/` ou `tests/`: a `/code-audit`, em modo auditoria, em contexto separado
+  (subagente ou outra sessão), com o diff e os ADRs, nunca o raciocínio de quem implementou.
+- Diff em `pixel/` ou numa fronteira de ADR: antes dela, a `/code-review`, no esforço da sessão,
+  nunca abaixo de high, com o nível explícito. `ultra` só o Mateus dispara. A `/code-audit`
+  confere cada achado.
+- Achado só se corrige com o sim do Mateus.

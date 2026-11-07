@@ -20,6 +20,7 @@ from architecture_rules import (
     ROOT,
     attribute_violations,
     cycle_violations,
+    disabled_tests,
     import_violations,
     io_only_violations,
     license_problem,
@@ -272,3 +273,36 @@ def test_property_tests_run_the_same_examples_and_keep_none() -> None:
     assert active is not None
     assert active.derandomize
     assert active.database is None
+
+
+# --- the change cycle (ADR-0007) --------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import pytest\n@pytest.mark.skip(reason='later')\ndef test_a() -> None: ...\n",
+        "import pytest\n@pytest.mark.xfail\ndef test_a() -> None: ...\n",
+        "import pytest\ndef test_a() -> None:\n    pytest.skip('later')\n",
+        "import pytest\n_ = pytest.importorskip('numpy')\n",
+        "from pytest import skip\n",
+        "def _test_a() -> None: ...\n",
+        "def xtest_a() -> None: ...\n",
+        "def DONT_test_a() -> None: ...\n",
+    ],
+    ids=["skip", "xfail", "skip_call", "importorskip", "imported", "underscore", "x", "dont"],
+)
+def test_disabled_test_rule_flags_a_test_switched_off(tmp_path: Path, source: str) -> None:
+    planted = tmp_path / "test_planted.py"
+    _ = planted.write_text(source)
+    assert disabled_tests([planted]) != []
+
+
+def test_disabled_test_rule_accepts_a_name_that_only_contains_test(tmp_path: Path) -> None:
+    planted = tmp_path / "test_planted.py"
+    _ = planted.write_text("def _latest_value() -> int:\n    return 1\n")
+    assert disabled_tests([planted]) == []
+
+
+def test_no_test_is_switched_off() -> None:
+    assert disabled_tests(python_files(ROOT / "tests")) == []
